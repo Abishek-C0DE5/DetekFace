@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "A reliable, beginner-friendly Python face detection package powered by YuNet and OpenCV"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Abishek" }
 ]
@@ -27,12 +28,13 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.20",
-    "opencv-python>=4.8; platform_system != 'Darwin' or platform_machine != 'arm64'",
+    "opencv-python>=4.8",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "build>=1.0",
 ]
 
 [tool.setuptools.packages.find]
