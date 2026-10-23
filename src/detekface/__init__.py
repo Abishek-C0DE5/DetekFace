@@ -8,8 +8,12 @@ from pathlib import Path
 from typing import List, Optional, Union
 import numpy as np
 
+from detekface.camera import camera
 from detekface.detector import FaceDetector
 from detekface.exceptions import (
+    CameraError,
+    CameraNotFoundError,
+    CameraReadError,
     ConfigurationError,
     DetekFaceError,
     ImageError,
@@ -95,6 +99,7 @@ def detect(
 __all__: List[str] = [
     "__version__",
     "detect",
+    "camera",
     "FaceDetector",
     "BoundingBox",
     "Point",
@@ -111,6 +116,9 @@ __all__: List[str] = [
     "ImageNotFoundError",
     "InvalidImageError",
     "ConfigurationError",
+    "CameraError",
+    "CameraNotFoundError",
+    "CameraReadError",
     "ModelMetadata",
     "OFFICIAL_MODELS",
     "get_cache_dir",

@@ -59,3 +59,18 @@ class InvalidImageError(ImageError):
 class ConfigurationError(DetekFaceError):
     """Raised when invalid thresholds or configuration parameters are provided."""
     pass
+
+
+class CameraError(DetekFaceError):
+    """Base exception for camera capture and video streaming errors."""
+    pass
+
+
+class CameraNotFoundError(CameraError):
+    """Raised when the specified camera device cannot be opened or is not detected."""
+    pass
+
+
+class CameraReadError(CameraError):
+    """Raised when reading a frame from the camera fails or the stream disconnects."""
+    pass

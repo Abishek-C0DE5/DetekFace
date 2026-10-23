@@ -6,9 +6,9 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 
 - **Milestone 1**: Clean src-layout package foundation, packaging configuration, and test suite.
 - **Milestone 2**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
-- **Milestone 3 (Current)**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
-- **Milestone 4**: Clean visualization & drawing utilities for annotations and bounding boxes.
-- **Milestone 5**: Webcam and real-time video stream support with graceful degradation.
+- **Milestone 3**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
+- **Milestone 4 (Current)**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
+- **Milestone 5**: Clean visualization & drawing utilities for annotations and custom styling.
 - **Milestone 6**: Polish, examples, documentation, and PyPI readiness.
 
 ## Installation
@@ -45,21 +45,29 @@ pytest
 
 ## Quick Verification
 
+### 1. Still-Image Face Detection
+
 ```python
 import detekface
 
-# 1. Detect faces in an image file or NumPy BGR array
 result = detekface.detect("photo.jpg", confidence_threshold=0.7)
-
 print(f"Found {result.count} face(s)")
 
 for face in result.faces:
     print("Bounding Box:", face.bbox.as_tuple())  # (x, y, width, height)
     print("Confidence :", f"{face.confidence * 100:.1f}%")
-    if face.landmarks:
-        print("Right Eye  :", face.landmarks.right_eye.as_tuple())
-        print("Left Eye   :", face.landmarks.left_eye.as_tuple())
-        print("Nose Tip   :", face.landmarks.nose_tip.as_tuple())
+```
+
+### 2. Live Webcam Face Detection
+
+```python
+import detekface
+
+# Open default webcam with live detection (press 'q' or Escape to close)
+detekface.camera()
+
+# Optional: customize camera index and mirror feed
+# detekface.camera(camera_index=0, mirror=False)
 ```
 
 ## Model Licensing & Credits
