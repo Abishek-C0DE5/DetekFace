@@ -197,6 +197,13 @@ class DetectionResult:
         """The unmodified original image array."""
         return self.image
 
+    @property
+    def rgb_image(self) -> np.ndarray:
+        """The original image array converted from BGR to RGB format."""
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            return self.image
+        return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+
     def annotate(
         self,
         shape: str = "rectangle",
@@ -460,6 +467,13 @@ class FaceCapture:
     def height(self) -> int:
         """Height of the cropped face in pixels."""
         return self.image.shape[0] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else 0
+
+    @property
+    def rgb_image(self) -> np.ndarray:
+        """The cropped face image converted from BGR to RGB format."""
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            return self.image
+        return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
     def __repr__(self) -> str:
         saved_info = f", saved to '{self.path}'" if self.path else ""

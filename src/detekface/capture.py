@@ -57,9 +57,21 @@ def capture(
             hint="Ensure the image or frame contains a clearly visible face above the confidence threshold.",
         )
 
-    # Face selection: largest by area, or user-selected index
+    img_h, img_w = result.image.shape[:2]
+
+    def _visible_area(face: FaceDetection) -> int:
+        vx1 = max(0, min(face.bbox.x1, img_w))
+        vy1 = max(0, min(face.bbox.y1, img_h))
+        vx2 = max(0, min(face.bbox.x2, img_w))
+        vy2 = max(0, min(face.bbox.y2, img_h))
+        return max(0, vx2 - vx1) * max(0, vy2 - vy1)
+
+    # Face selection: largest by visible area, or user-selected index
     if face_index is None:
-        target_face: FaceDetection = max(result.faces, key=lambda f: (f.bbox.area, f.confidence))
+        target_face: FaceDetection = max(
+            result.faces,
+            key=lambda f: (_visible_area(f), f.bbox.area, f.confidence),
+        )
     else:
         if not isinstance(face_index, int) or face_index < 0 or face_index >= len(result.faces):
             raise IndexError(
@@ -67,7 +79,6 @@ def capture(
             )
         target_face = result.faces[face_index]
 
-    img_h, img_w = result.image.shape[:2]
     bbox = target_face.bbox
 
     # Clamp coordinates strictly within image boundaries

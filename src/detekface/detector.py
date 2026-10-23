@@ -67,8 +67,16 @@ def _load_and_validate_image(image_input: Union[str, Path, np.ndarray]) -> np.nd
         # Normalize data type to uint8
         img = image_input
         if img.dtype != np.uint8:
-            if np.issubdtype(img.dtype, np.floating) and img.max() <= 1.0:
-                img = (img * 255.0).clip(0, 255).astype(np.uint8)
+            if np.issubdtype(img.dtype, np.floating):
+                if not np.all(np.isfinite(img)):
+                    raise InvalidImageError(
+                        message="Image array contains NaN or infinite values.",
+                        hint="Clean or impute non-finite values before passing to detector.",
+                    )
+                if img.max() <= 1.0:
+                    img = (img * 255.0).clip(0, 255).astype(np.uint8)
+                else:
+                    img = img.clip(0, 255).astype(np.uint8)
             else:
                 img = img.clip(0, 255).astype(np.uint8)
 

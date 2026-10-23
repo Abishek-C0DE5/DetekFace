@@ -16,6 +16,8 @@ from detekface.drawing import (
 from detekface.exceptions import (
     CameraNotFoundError,
     CameraReadError,
+    CaptureError,
+    CaptureSaveError,
     ConfigurationError,
     NoFaceDetectedError,
 )
@@ -188,13 +190,29 @@ def camera(
                     print(f"[detekface] Captured face saved to: {captured.path}")
 
                     if on_capture is not None:
-                        on_capture(captured)
+                        try:
+                            on_capture(captured)
+                        except Exception as cb_err:
+                            feedback_text = "Callback failed!"
+                            feedback_frames = 30
+                            feedback_color = (0, 0, 255)
+                            print(f"[detekface] Warning: on_capture callback raised an exception: {cb_err}")
 
                 except NoFaceDetectedError:
                     feedback_text = "No face detected!"
                     feedback_frames = 30
                     feedback_color = (0, 140, 255)
                     print("[detekface] Capture skipped: No face detected.")
+                except CaptureSaveError as save_err:
+                    feedback_text = "Save failed!"
+                    feedback_frames = 30
+                    feedback_color = (0, 0, 255)
+                    print(f"[detekface] Error: Capture failed to save: {save_err}")
+                except CaptureError as cap_err:
+                    feedback_text = "Capture error!"
+                    feedback_frames = 30
+                    feedback_color = (0, 0, 255)
+                    print(f"[detekface] Error during capture: {cap_err}")
 
     finally:
         # Guarantee camera release and window destruction even on exception
