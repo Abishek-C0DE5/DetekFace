@@ -9,7 +9,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 - **Milestone 3**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
 - **Milestone 4**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
 - **Milestone 5**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
-- **Milestone 6 (Current)**: Customizable face-overlay rendering (`rectangle`, `corners`, `circle`, `rounded`, `hud`), RGB/hex-to-BGR color conversion, thickness styling, and pure non-mutating overlays.
+- **Milestone 6**: Customizable face-overlay rendering (`rectangle`, `corners`, `circle`, `rounded`, `hud`), RGB/hex-to-BGR color conversion, thickness styling, and pure non-mutating overlays.
+- **Milestone 7 (Current)**: Optional webcam metrics and information overlays (`show_confidence`, `show_fps`, `show_count`), sliding-window smoothed FPS calculation, readable metrics badges, and zero crop pollution.
 
 ## Installation
 
@@ -64,11 +65,14 @@ print(f"Captured {face.width}x{face.height}px face to: {face.path}")
 ```python
 import detekface
 
-# Open webcam with custom HUD overlay, neon green color, and callback
+# Open webcam with custom HUD overlay, metrics badges, and callback
 detekface.camera(
     shape="hud",           # 'rectangle', 'corners', 'circle', 'rounded', 'hud'
     color="#00FF88",       # Hex code or name ('cyan', 'neon_green', 'red', etc.)
     thickness=3,
+    show_confidence=True,  # Display detection confidence score near each face
+    show_fps=True,         # Display smoothed live processing throughput FPS
+    show_count=True,       # Display current face count badge
     on_capture=lambda face: print("Captured face to:", face.path),
 )
 ```

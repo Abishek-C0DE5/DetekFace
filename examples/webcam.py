@@ -50,6 +50,21 @@ def main() -> None:
         default=3,
         help="Line stroke thickness in pixels (default: 3).",
     )
+    parser.add_argument(
+        "--show-confidence",
+        action="store_true",
+        help="Display face detection confidence scores near each face.",
+    )
+    parser.add_argument(
+        "--show-fps",
+        action="store_true",
+        help="Display real-time measured FPS throughput.",
+    )
+    parser.add_argument(
+        "--show-count",
+        action="store_true",
+        help="Display the number of faces detected in the current frame.",
+    )
 
     args = parser.parse_args()
 
@@ -64,6 +79,9 @@ def main() -> None:
     print(f"Shape overlay: {args.shape}")
     print(f"Color        : {args.color}")
     print(f"Thickness    : {args.thickness}")
+    print(f"Confidence   : {args.show_confidence}")
+    print(f"Show FPS     : {args.show_fps}")
+    print(f"Face Count   : {args.show_count}")
     print(f"Capture dir  : {args.capture_dir}")
     print("Controls     : Press 'c' to capture face, 'q' or 'Escape' to exit.\n")
 
@@ -75,6 +93,9 @@ def main() -> None:
             shape=args.shape,
             color=args.color,
             thickness=args.thickness,
+            show_confidence=args.show_confidence,
+            show_fps=args.show_fps,
+            show_count=args.show_count,
             capture_dir=args.capture_dir,
             on_capture=handle_capture,
         )

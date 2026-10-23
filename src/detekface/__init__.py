@@ -12,10 +12,15 @@ from detekface.camera import camera
 from detekface.capture import capture
 from detekface.detector import FaceDetector
 from detekface.drawing import (
+    FPSCounter,
     NAMED_COLORS,
     SUPPORTED_SHAPES,
     draw_face_overlay,
     draw_faces,
+    draw_metrics_overlay,
+    format_confidence,
+    format_face_count,
+    format_fps,
     parse_color_to_bgr,
 )
 from detekface.exceptions import (
@@ -116,7 +121,12 @@ __all__: List[str] = [
     "capture",
     "draw_faces",
     "draw_face_overlay",
+    "draw_metrics_overlay",
     "parse_color_to_bgr",
+    "format_confidence",
+    "format_face_count",
+    "format_fps",
+    "FPSCounter",
     "SUPPORTED_SHAPES",
     "NAMED_COLORS",
     "FaceDetector",

@@ -6,8 +6,19 @@ import cv2
 
 from detekface.capture import capture
 from detekface.detector import FaceDetector
-from detekface.drawing import draw_faces, parse_color_to_bgr, validate_render_parameters
-from detekface.exceptions import CameraNotFoundError, CameraReadError, NoFaceDetectedError
+from detekface.drawing import (
+    FPSCounter,
+    draw_faces,
+    draw_metrics_overlay,
+    parse_color_to_bgr,
+    validate_render_parameters,
+)
+from detekface.exceptions import (
+    CameraNotFoundError,
+    CameraReadError,
+    ConfigurationError,
+    NoFaceDetectedError,
+)
 from detekface.types import FaceCapture
 
 
@@ -19,6 +30,9 @@ def camera(
     shape: str = "rectangle",
     color: Union[str, Tuple[int, int, int]] = "#00FF88",
     thickness: int = 3,
+    show_confidence: bool = False,
+    show_fps: bool = False,
+    show_count: bool = False,
     capture_dir: Optional[Union[str, Path]] = "captures",
     on_capture: Optional[Callable[[FaceCapture], None]] = None,
     window_title: str = "detekface - Live Face Detection",
@@ -39,24 +53,46 @@ def camera(
                Default is 'rectangle'.
         color: RGB hex string (e.g. '#00FF88') or documented color name. Default is '#00FF88'.
         thickness: Line stroke thickness in pixels (default 3).
+        show_confidence: Whether to display confidence percentage near each detected face (default False).
+        show_fps: Whether to display measured, smoothed real-time FPS throughput (default False).
+        show_count: Whether to display the total number of faces in the current frame (default False).
         capture_dir: Directory where face captures triggered via 'C' are saved (default 'captures').
         on_capture: Optional callback function invoked with the FaceCapture object when 'C' is pressed.
         window_title: Window title for the OpenCV preview window.
         max_frames: Optional maximum number of frames to process before closing (useful for automated testing).
 
     Raises:
-        ConfigurationError: If shape, color, or thickness parameters are invalid.
+        ConfigurationError: If shape, color, thickness, or display flags are invalid.
         CameraNotFoundError: If the camera cannot be opened or is not detected.
         CameraReadError: If capturing a video frame from the camera fails.
     """
     valid_shape, valid_thickness = validate_render_parameters(shape, thickness)
     bgr_color = parse_color_to_bgr(color)
 
+    if not isinstance(show_confidence, bool):
+        raise ConfigurationError(
+            message=f"show_confidence must be a boolean, got {type(show_confidence).__name__}.",
+            hint="Set show_confidence=True or show_confidence=False.",
+        )
+    if not isinstance(show_fps, bool):
+        raise ConfigurationError(
+            message=f"show_fps must be a boolean, got {type(show_fps).__name__}.",
+            hint="Set show_fps=True or show_fps=False.",
+        )
+    if not isinstance(show_count, bool):
+        raise ConfigurationError(
+            message=f"show_count must be a boolean, got {type(show_count).__name__}.",
+            hint="Set show_count=True or show_count=False.",
+        )
+
     if detector is None:
         detector = FaceDetector(confidence_threshold=confidence_threshold)
 
     cap = cv2.VideoCapture(camera_index)
     frames_processed = 0
+
+    # Real-time smoothed FPS throughput tracker
+    fps_counter = FPSCounter(window_size=30)
 
     # On-screen feedback state
     feedback_text: str = ""
@@ -81,6 +117,8 @@ def camera(
                     hint="The camera may have been disconnected or encountered a hardware/driver error.",
                 )
 
+            current_fps = fps_counter.tick()
+
             # Horizontally mirror the frame if requested
             if mirror:
                 frame = cv2.flip(frame, 1)
@@ -99,15 +137,25 @@ def camera(
                 shape=valid_shape,
                 color=bgr_color,
                 thickness=valid_thickness,
+                show_confidence=show_confidence,
                 copy=False,
             )
 
-            # Render feedback message if active
+            # Draw status metrics (FPS and Face count)
+            if show_fps or show_count:
+                draw_metrics_overlay(
+                    display_frame,
+                    fps=current_fps if show_fps else None,
+                    face_count=result.count if show_count else None,
+                    color_bgr=bgr_color,
+                )
+
+            # Render capture feedback banner if active
             if feedback_frames > 0:
                 cv2.putText(
                     display_frame,
                     feedback_text,
-                    (20, 45),
+                    (20, 60 if (show_fps or show_count) else 45),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.8,
                     feedback_color,
