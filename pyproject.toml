@@ -31,6 +31,11 @@ dependencies = [
     "opencv-python>=4.8",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Abishek-C0DE5/DetekFace"
+Repository = "https://github.com/Abishek-C0DE5/DetekFace.git"
+Issues = "https://github.com/Abishek-C0DE5/DetekFace/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",

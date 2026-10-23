@@ -180,11 +180,14 @@ def test_real_hardware_webcam_execution_if_available() -> None:
     Opens camera 0, captures up to 2 frames, runs detection, and verifies clean release.
     """
     test_cap = cv2.VideoCapture(0)
-    hardware_available = test_cap.isOpened()
+    hardware_available = False
+    if test_cap.isOpened():
+        ret, frame = test_cap.read()
+        hardware_available = bool(ret and frame is not None)
     test_cap.release()
 
     if not hardware_available:
-        pytest.skip("No physical webcam hardware detected on index 0.")
+        pytest.skip("No physical webcam hardware detected or readable on index 0.")
 
     # Run for exactly 2 frames so the test finishes automatically without user input
     camera(camera_index=0, mirror=True, max_frames=2)

@@ -1,0 +1,184 @@
+# Configuration & Styling Guide
+
+`detekface` is designed with sensible defaults while offering extensive styling, telemetry, and detection tuning options across all modes (`camera()`, `detect()`, `video()`, and `result.save()`).
+
+---
+
+## Visual Overlay Styles (`shape`)
+
+`detekface` provides five distinct rendering styles for drawing detected faces:
+
+| Shape Name | Appearance & Design | Best Used For |
+| :--- | :--- | :--- |
+| `"rectangle"` | Clean, classic 4-corner bounding box enclosing the face. Default style. | General purpose computer vision, debugging, standard pipelines. |
+| `"corners"` | Sleek corner brackets drawn at the 4 vertices of the box with open edges. | Modern minimalist UI, camera viewfinders, surveillance dashboards. |
+| `"circle"` | Smooth circular overlay centered on the face with a radius covering the bounding box. | Avatar creators, profile framing, social media applications. |
+| `"rounded"` | Elegant rectangle with rounded corners. | Premium application interfaces, polished user experiences. |
+| `"hud"` | High-tech Sci-Fi Heads-Up Display featuring corner brackets, crosshairs at the center, and a top identity bar. | Cyberpunk aesthetics, aerospace/military-style demos, robotics. |
+
+### Visual Comparison Example
+
+```python
+import detekface
+
+result = detekface.detect("person.jpg")
+
+# Test different visual styles
+for style in ["rectangle", "corners", "circle", "rounded", "hud"]:
+    result.save(f"preview_{style}.jpg", shape=style, color="#00FF88", thickness=2)
+```
+
+> **Note on Geometric Accuracy**: Overlays such as `"circle"` represent geometric visual enclosures around the detected facial bounding box. They do not represent exact facial boundary contours.
+
+---
+
+## Color Customization (`color`)
+
+The `color` parameter accepts three convenient formats:
+
+### 1. Hex Strings
+Standard CSS-style 6-character or 3-character hex color codes with or without a leading `#`:
+```python
+detekface.camera(color="#00FF88")  # Neon green (Hex)
+detekface.camera(color="#FF4500")  # Orange-red
+detekface.camera(color="00E5FF")   # Vibrant cyan
+detekface.camera(color="#0F8")     # Shorthand 3-digit hex
+```
+
+### 2. Predefined Named Colors
+Built-in human-readable color names:
+```python
+detekface.camera(color="neon_green")
+```
+
+Supported named colors include:
+- `green` `(0, 255, 0)`
+- `neon_green` `(0, 255, 136)`
+- `red` `(255, 0, 0)`
+- `blue` `(0, 0, 255)`
+- `cyan` `(0, 255, 255)`
+- `yellow` `(255, 255, 0)`
+- `magenta` `(255, 0, 255)`
+- `orange` `(255, 165, 0)`
+- `white` `(255, 255, 255)`
+- `black` `(0, 0, 0)`
+- `lime` `(50, 205, 50)`
+- `teal` `(0, 128, 128)`
+- `purple` `(128, 0, 128)`
+
+### 3. RGB Tuples
+Direct 3-integer tuples in `(Red, Green, Blue)` format (0 to 255):
+```python
+detekface.camera(color=(0, 255, 136))
+```
+
+> **Color Conversion Guarantee**: OpenCV internally stores images in BGR order. `detekface.parse_color_to_bgr()` handles all conversions, preventing channel swapping mistakes.
+
+---
+
+## Line Thickness (`thickness`)
+
+Control the stroke width in pixels of bounding boxes and shapes:
+```python
+detekface.camera(thickness=2)  # Refined 2px stroke
+detekface.camera(thickness=4)  # Bold 4px stroke
+```
+- Must be a positive integer (`>= 1`).
+- Default is `2` (or `3` for HUD accentuation).
+
+---
+
+## Telemetry & Information Overlays
+
+Enable real-time performance and detection metrics in `camera()` or `video()`:
+
+```python
+detekface.camera(
+    show_confidence=True,  # Displays confidence badge (e.g., '96.4%') near each face
+    show_fps=True,         # Displays live smoothed processing FPS in top banner
+    show_count=True,       # Displays detected face count in top banner
+)
+```
+
+### 1. `show_confidence` (Boolean, Default: `False`)
+Draws a readable semi-transparent badge with the detection percentage next to each face.
+- Automatically adjusts position to remain within frame boundaries even if the face touches the top edge.
+
+### 2. `show_fps` (Boolean, Default: `False`)
+Measures real frame-to-frame processing and display throughput using a sliding-window rolling average (`FPSCounter`).
+- Accurately measures system performance; never a hardcoded placeholder.
+
+### 3. `show_count` (Boolean, Default: `False`)
+Displays the exact count of faces detected in the current frame (e.g., `Faces: 3`).
+
+---
+
+## Detector Tuning
+
+Adjust core model thresholds when calling `detect()`, `camera()`, or initializing `FaceDetector`:
+
+```python
+from detekface import FaceDetector
+
+detector = FaceDetector(
+    confidence_threshold=0.80,  # Stricter detection (fewer false positives)
+    nms_threshold=0.25,         # Aggressive suppression of overlapping boxes
+    top_k=5000,                 # Candidates evaluated prior to NMS
+)
+```
+
+| Parameter | Default | Recommended Range | Purpose |
+| :--- | :--- | :--- | :--- |
+| `confidence_threshold` | `0.7` | `0.5` – `0.85` | **Precision vs Recall**. Lower values (e.g., `0.55`) help detect small, distant, or dimly lit faces. Higher values (e.g., `0.85`) eliminate spurious false detections. |
+| `nms_threshold` | `0.3` | `0.2` – `0.4` | **Overlap suppression**. Governs how aggressively multiple overlapping boxes on the same face are merged. |
+| `top_k` | `5000` | `1000` – `5000` | Limits initial region proposals generated across feature map pyramids. |
+
+---
+
+## Model & Cache Configuration
+
+By default, `detekface` automatically manages the official YuNet ONNX model file.
+
+### Cache Directory Customization
+You can configure where model weights are stored:
+
+1. **Via Python argument**:
+   ```python
+   detekface.detect("photo.jpg", cache_dir="C:/app_cache/models")
+   ```
+2. **Via Environment Variable**:
+   ```powershell
+   $env:DETEKFACE_CACHE_DIR = "D:\CustomModels\DetekFace"
+   ```
+
+### Default Cache Paths
+- **Windows**: `%LOCALAPPDATA%\detekface` (e.g., `C:\Users\<User>\AppData\Local\detekface`)
+- **Linux**: `~/.cache/detekface`
+- **macOS**: `~/Library/Caches/detekface`
+
+### Using Custom / Local ONNX Models
+If working offline or using a custom-trained YuNet model:
+```python
+# Pass an absolute or relative path to your local .onnx file
+result = detekface.detect(
+    "photo.jpg",
+    model="models/custom_face_detection_yunet_2023mar.onnx"
+)
+```
+
+---
+
+## Error Handling
+
+Invalid configuration parameters raise `ConfigurationError` with a corrective hint:
+
+```python
+import detekface
+from detekface.exceptions import ConfigurationError
+
+try:
+    detekface.camera(shape="triangle")
+except ConfigurationError as err:
+    print(f"Configuration error: {err.message}")
+    print(f"Resolution hint: {err.hint}")
+```

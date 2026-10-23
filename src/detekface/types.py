@@ -469,6 +469,11 @@ class FaceCapture:
         return self.image.shape[0] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else 0
 
     @property
+    def box(self) -> BoundingBox:
+        """BoundingBox alias for bbox."""
+        return self.bbox
+
+    @property
     def rgb_image(self) -> np.ndarray:
         """The cropped face image converted from BGR to RGB format."""
         if not isinstance(self.image, np.ndarray) or self.image.size == 0:
