@@ -9,8 +9,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 - **Milestone 3**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
 - **Milestone 4**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
 - **Milestone 5**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
-- **Milestone 6**: Customizable face-overlay rendering (`rectangle`, `corners`, `circle`, `rounded`, `hud`), RGB/hex-to-BGR color conversion, thickness styling, and pure non-mutating overlays.
-- **Milestone 7 (Current)**: Optional webcam metrics and information overlays (`show_confidence`, `show_fps`, `show_count`), sliding-window smoothed FPS calculation, readable metrics badges, and zero crop pollution.
+- **Milestone 7**: Optional webcam metrics and information overlays (`show_confidence`, `show_fps`, `show_count`), sliding-window smoothed FPS calculation, readable metrics badges, and zero crop pollution.
+- **Milestone 8 (Current)**: Finalized public image API (`result.count`, `result.faces`, `result.show()`, `result.save()`), explicit overlay styling and color options, format validation, and guaranteed clean face cropping.
 
 ## Installation
 
@@ -46,17 +46,23 @@ pytest
 
 ## Quick Verification
 
-### 1. Still-Image Face Detection & Cropping
+### 1. Still-Image Face Detection, Annotation, & Cropping
 
 ```python
 import detekface
 
-# Detect faces
+# Detect faces in an image
 result = detekface.detect("photo.jpg", confidence_threshold=0.7)
 print(f"Found {result.count} face(s)")
 
-# Crop and save the largest face
-face = detekface.capture(result, save_dir="captures", filename="my_face.jpg")
+# Display detected faces in a GUI window
+result.show(shape="hud", color="#00FF88", show_confidence=True)
+
+# Save annotated image to disk with custom overlays
+result.save("annotated.jpg", shape="hud", color="#00FF88", show_confidence=True)
+
+# Crop and save the largest face (always cropped cleanly from the original image)
+face = result.capture(save_dir="captures", filename="my_face.jpg")
 print(f"Captured {face.width}x{face.height}px face to: {face.path}")
 ```
 

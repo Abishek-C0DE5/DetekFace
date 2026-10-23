@@ -56,6 +56,11 @@ class InvalidImageError(ImageError):
     pass
 
 
+class ImageSaveError(ImageError):
+    """Raised when writing or encoding an annotated image file to disk fails."""
+    pass
+
+
 class ConfigurationError(DetekFaceError):
     """Raised when invalid thresholds or configuration parameters are provided."""
     pass

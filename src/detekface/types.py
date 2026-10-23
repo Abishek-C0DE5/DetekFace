@@ -2,8 +2,13 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple
+from typing import Iterator, List, Optional, Sequence, Tuple, Union
+import cv2
 import numpy as np
+
+from detekface.exceptions import DetekFaceError, ImageSaveError, InvalidImageError
+
+SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"}
 
 
 @dataclass(frozen=True)
@@ -186,6 +191,242 @@ class DetectionResult:
 
     def __getitem__(self, index: int) -> FaceDetection:
         return self.faces[index]
+
+    @property
+    def original_image(self) -> np.ndarray:
+        """The unmodified original image array."""
+        return self.image
+
+    def annotate(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+    ) -> np.ndarray:
+        """Render face overlay annotations on a copy of the original image.
+
+        Args:
+             shape: Overlay shape ('rectangle', 'corners', 'circle', 'rounded', 'hud').
+             color: RGB hex code (e.g. '#00FF88'), color name ('cyan', 'green', etc.), or RGB tuple.
+             thickness: Line stroke thickness in pixels (default 3).
+             show_confidence: Whether to draw confidence percentage badges near each face.
+
+        Returns:
+             A new NumPy array (BGR uint8) containing the annotated image with overlays.
+        """
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            raise InvalidImageError(
+                message="DetectionResult does not contain a valid image array to annotate.",
+                hint="Verify that the detection result contains valid image data.",
+            )
+
+        from detekface.drawing import draw_faces
+
+        return draw_faces(
+            image=self.image,
+            faces=self.faces,
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+            copy=True,
+        )
+
+    def draw(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+    ) -> np.ndarray:
+        """Alias for `annotate()` to obtain the rendered image array."""
+        return self.annotate(
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+        )
+
+    @property
+    def annotated(self) -> np.ndarray:
+        """Annotated image array with default overlay styling."""
+        return self.annotate()
+
+    def show(
+        self,
+        title: str = "DetekFace Detection",
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+        delay: int = 0,
+    ) -> int:
+        """Display the annotated image in an OpenCV GUI window until closed or dismissed.
+
+        Args:
+            title: Title string of the GUI display window.
+            shape: Overlay shape ('rectangle', 'corners', 'circle', 'rounded', 'hud').
+            color: Overlay color name, hex string, or RGB tuple.
+            thickness: Stroke thickness.
+            show_confidence: Whether to display detection confidence labels.
+            delay: Milliseconds to wait before closing (if > 0). Default is 0, which
+                   waits until the user presses a key or closes the window.
+
+        Returns:
+            The integer keycode of the pressed key, or -1 if the window was closed.
+        """
+        annotated_frame = self.annotate(
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+        )
+
+        try:
+            cv2.namedWindow(title, cv2.WINDOW_AUTOSIZE)
+            cv2.imshow(title, annotated_frame)
+        except cv2.error as e:
+            raise DetekFaceError(
+                message=f"Failed to display GUI window '{title}'.",
+                hint="Ensure an active graphical display environment is available.",
+            ) from e
+
+        try:
+            if delay > 0:
+                raw_key = cv2.waitKey(delay)
+                return (raw_key & 0xFF) if raw_key != -1 else -1
+
+            # Polling loop allows clean exit when user presses a key OR clicks OS window close button
+            while True:
+                raw_key = cv2.waitKey(50)
+                if raw_key != -1:
+                    return raw_key & 0xFF
+                try:
+                    prop = cv2.getWindowProperty(title, cv2.WND_PROP_VISIBLE)
+                    if prop < 1:
+                        return -1
+                except cv2.error:
+                    return -1
+        finally:
+            try:
+                cv2.destroyWindow(title)
+            except cv2.error:
+                pass
+
+    def save(
+        self,
+        path: Union[str, Path],
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+    ) -> Path:
+        """Save the annotated image with overlays to the requested disk path.
+
+        Args:
+            path: Target file path (str or Path) with a supported image extension.
+            shape: Overlay shape ('rectangle', 'corners', 'circle', 'rounded', 'hud').
+            color: Overlay color name, hex string, or RGB tuple.
+            thickness: Stroke thickness in pixels.
+            show_confidence: Whether to draw confidence scores.
+
+        Returns:
+            The resolved Path to the saved image file.
+
+        Raises:
+            InvalidImageError: If the path is empty, invalid, or has an unsupported extension.
+            ImageSaveError: If the directory cannot be created or saving the file fails.
+        """
+        if path is None or not isinstance(path, (str, Path)) or not str(path).strip():
+            raise InvalidImageError(
+                message=f"Invalid save path: {path!r}.",
+                hint="Provide a valid filepath string or Path with a supported image extension.",
+            )
+
+        target_path = Path(path).expanduser()
+        ext = target_path.suffix.lower()
+
+        if not ext:
+            raise InvalidImageError(
+                message=f"Save path '{target_path}' has no file extension.",
+                hint=f"Provide a file extension such as: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
+            )
+
+        if ext not in SUPPORTED_IMAGE_EXTENSIONS:
+            raise InvalidImageError(
+                message=f"Unsupported image file format '{ext}' in path: '{target_path}'.",
+                hint=f"Supported formats are: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
+            )
+
+        parent_dir = target_path.parent
+        if not parent_dir.exists():
+            try:
+                parent_dir.mkdir(parents=True, exist_ok=True)
+            except OSError as e:
+                raise ImageSaveError(
+                    message=f"Could not create parent directory for save path: '{parent_dir}'.",
+                    hint=str(e),
+                ) from e
+        elif not parent_dir.is_dir():
+            raise ImageSaveError(
+                message=f"Parent path of save target is a file, not a directory: '{parent_dir}'.",
+                hint="Specify a destination path inside a valid directory.",
+            )
+
+        annotated_frame = self.annotate(
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+        )
+
+        resolved_path = target_path.resolve()
+        try:
+            success = cv2.imwrite(str(resolved_path), annotated_frame)
+            if not success:
+                raise ImageSaveError(
+                    message=f"OpenCV failed to write image to disk at: '{resolved_path}'.",
+                    hint="Verify directory write permissions and available disk space.",
+                )
+        except cv2.error as e:
+            raise ImageSaveError(
+                message=f"OpenCV encountered an error while writing: '{resolved_path}'.",
+                hint=str(e),
+            ) from e
+
+        return resolved_path
+
+    def capture(
+        self,
+        face_index: Optional[int] = None,
+        save_dir: Optional[Union[str, Path]] = None,
+        filename: Optional[str] = None,
+        save: bool = True,
+    ) -> "FaceCapture":
+        """Crop and capture a detected face from this DetectionResult.
+
+        Crops strictly from the original, unannotated image to ensure the captured
+        face is never polluted with drawn overlays.
+
+        Args:
+             face_index: Index of face to capture (default None chooses largest face).
+             save_dir: Directory where the face crop is saved (default 'captures').
+             filename: Optional custom filename.
+             save: Whether to save crop to disk (default True).
+
+        Returns:
+             FaceCapture containing the cropped image and metadata.
+        """
+        from detekface.capture import capture
+
+        return capture(
+            result=self,
+            face_index=face_index,
+            save_dir=save_dir,
+            filename=filename,
+            save=save,
+        )
 
     def __repr__(self) -> str:
         img_h, img_w = self.image.shape[:2] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else (0, 0)

@@ -33,6 +33,7 @@ from detekface.exceptions import (
     DetekFaceError,
     ImageError,
     ImageNotFoundError,
+    ImageSaveError,
     InvalidCropError,
     InvalidImageError,
     ModelCompatibilityError,
@@ -50,6 +51,7 @@ from detekface.models import (
     verify_model_initialization,
 )
 from detekface.types import (
+    SUPPORTED_IMAGE_EXTENSIONS,
     BoundingBox,
     DetectionResult,
     FaceCapture,
@@ -128,6 +130,7 @@ __all__: List[str] = [
     "format_fps",
     "FPSCounter",
     "SUPPORTED_SHAPES",
+    "SUPPORTED_IMAGE_EXTENSIONS",
     "NAMED_COLORS",
     "FaceDetector",
     "BoundingBox",
@@ -145,6 +148,7 @@ __all__: List[str] = [
     "ImageError",
     "ImageNotFoundError",
     "InvalidImageError",
+    "ImageSaveError",
     "ConfigurationError",
     "CameraError",
     "CameraNotFoundError",
