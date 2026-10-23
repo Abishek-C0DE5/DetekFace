@@ -8,8 +8,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 - **Milestone 2**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
 - **Milestone 3**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
 - **Milestone 4**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
-- **Milestone 5 (Current)**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
-- **Milestone 6**: Polish, examples, documentation, and PyPI readiness.
+- **Milestone 5**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
+- **Milestone 6 (Current)**: Customizable face-overlay rendering (`rectangle`, `corners`, `circle`, `rounded`, `hud`), RGB/hex-to-BGR color conversion, thickness styling, and pure non-mutating overlays.
 
 ## Installation
 
@@ -59,16 +59,18 @@ face = detekface.capture(result, save_dir="captures", filename="my_face.jpg")
 print(f"Captured {face.width}x{face.height}px face to: {face.path}")
 ```
 
-### 2. Live Webcam Face Detection & Interactive Capture
+### 2. Live Webcam with Customizable Face Overlays
 
 ```python
 import detekface
 
-def on_face_captured(face):
-    print("New face captured!", face.path)
-
-# Open webcam: press 'c' to capture largest face, press 'q' or Escape to close
-detekface.camera(on_capture=on_face_captured)
+# Open webcam with custom HUD overlay, neon green color, and callback
+detekface.camera(
+    shape="hud",           # 'rectangle', 'corners', 'circle', 'rounded', 'hud'
+    color="#00FF88",       # Hex code or name ('cyan', 'neon_green', 'red', etc.)
+    thickness=3,
+    on_capture=lambda face: print("Captured face to:", face.path),
+)
 ```
 
 ## Model Licensing & Credits

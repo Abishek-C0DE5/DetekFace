@@ -1,11 +1,12 @@
-"""Live webcam capture and face detection display loop."""
+"""Live webcam capture, customizable face overlay rendering, and capture loop."""
 
 from pathlib import Path
-from typing import Callable, Optional, Union
+from typing import Callable, Optional, Tuple, Union
 import cv2
 
 from detekface.capture import capture
 from detekface.detector import FaceDetector
+from detekface.drawing import draw_faces, parse_color_to_bgr, validate_render_parameters
 from detekface.exceptions import CameraNotFoundError, CameraReadError, NoFaceDetectedError
 from detekface.types import FaceCapture
 
@@ -15,12 +16,15 @@ def camera(
     mirror: bool = True,
     confidence_threshold: float = 0.7,
     detector: Optional[FaceDetector] = None,
+    shape: str = "rectangle",
+    color: Union[str, Tuple[int, int, int]] = "#00FF88",
+    thickness: int = 3,
     capture_dir: Optional[Union[str, Path]] = "captures",
     on_capture: Optional[Callable[[FaceCapture], None]] = None,
     window_title: str = "detekface - Live Face Detection",
     max_frames: Optional[int] = None,
 ) -> None:
-    """Open a live webcam feed, detect faces in real time, and display bounding boxes.
+    """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
     Controls:
         - Press 'c' or 'C' to capture and save the largest detected face.
@@ -31,15 +35,23 @@ def camera(
         mirror: Whether to horizontally flip the live feed for a mirror-like experience (default True).
         confidence_threshold: Minimum detection confidence score (0.0 to 1.0). Default is 0.7.
         detector: Optional pre-configured FaceDetector instance. Reuses existing engine if provided.
+        shape: Face overlay shape style. One of 'rectangle', 'corners', 'circle', 'rounded', 'hud'.
+               Default is 'rectangle'.
+        color: RGB hex string (e.g. '#00FF88') or documented color name. Default is '#00FF88'.
+        thickness: Line stroke thickness in pixels (default 3).
         capture_dir: Directory where face captures triggered via 'C' are saved (default 'captures').
         on_capture: Optional callback function invoked with the FaceCapture object when 'C' is pressed.
         window_title: Window title for the OpenCV preview window.
         max_frames: Optional maximum number of frames to process before closing (useful for automated testing).
 
     Raises:
+        ConfigurationError: If shape, color, or thickness parameters are invalid.
         CameraNotFoundError: If the camera cannot be opened or is not detected.
         CameraReadError: If capturing a video frame from the camera fails.
     """
+    valid_shape, valid_thickness = validate_render_parameters(shape, thickness)
+    bgr_color = parse_color_to_bgr(color)
+
     if detector is None:
         detector = FaceDetector(confidence_threshold=confidence_threshold)
 
@@ -73,24 +85,27 @@ def camera(
             if mirror:
                 frame = cv2.flip(frame, 1)
 
-            # Perform face detection using existing engine
-            result = detector.detect(frame)
+            # Keep a pristine copy of the frame for detection and clean crops
+            clean_frame = frame.copy()
 
-            # Draw simple green rectangular box around each detected face
-            for face in result.faces:
-                bbox = face.bbox
-                cv2.rectangle(
-                    frame,
-                    (bbox.x1, bbox.y1),
-                    (bbox.x2, bbox.y2),
-                    (0, 255, 0),
-                    2,
-                )
+            # Perform face detection using existing engine
+            result = detector.detect(clean_frame)
+
+            # Draw customizable overlays on the display frame
+            display_frame = frame
+            draw_faces(
+                display_frame,
+                result.faces,
+                shape=valid_shape,
+                color=bgr_color,
+                thickness=valid_thickness,
+                copy=False,
+            )
 
             # Render feedback message if active
             if feedback_frames > 0:
                 cv2.putText(
-                    frame,
+                    display_frame,
                     feedback_text,
                     (20, 45),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -101,7 +116,7 @@ def camera(
                 )
                 feedback_frames -= 1
 
-            cv2.imshow(window_title, frame)
+            cv2.imshow(window_title, display_frame)
 
             frames_processed += 1
             if max_frames is not None and frames_processed >= max_frames:

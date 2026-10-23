@@ -11,6 +11,13 @@ import numpy as np
 from detekface.camera import camera
 from detekface.capture import capture
 from detekface.detector import FaceDetector
+from detekface.drawing import (
+    NAMED_COLORS,
+    SUPPORTED_SHAPES,
+    draw_face_overlay,
+    draw_faces,
+    parse_color_to_bgr,
+)
 from detekface.exceptions import (
     CameraError,
     CameraNotFoundError,
@@ -107,6 +114,11 @@ __all__: List[str] = [
     "detect",
     "camera",
     "capture",
+    "draw_faces",
+    "draw_face_overlay",
+    "parse_color_to_bgr",
+    "SUPPORTED_SHAPES",
+    "NAMED_COLORS",
     "FaceDetector",
     "BoundingBox",
     "Point",

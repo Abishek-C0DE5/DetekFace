@@ -31,6 +31,25 @@ def main() -> None:
         default="captures",
         help="Directory where cropped face captures will be saved (default: 'captures').",
     )
+    parser.add_argument(
+        "--shape",
+        type=str,
+        default="rectangle",
+        choices=["rectangle", "corners", "circle", "rounded", "hud"],
+        help="Overlay shape style: rectangle, corners, circle, rounded, hud (default: rectangle).",
+    )
+    parser.add_argument(
+        "--color",
+        type=str,
+        default="#00FF88",
+        help="Overlay color: hex string (e.g. '#00FF88') or color name (default: '#00FF88').",
+    )
+    parser.add_argument(
+        "--thickness",
+        type=int,
+        default=3,
+        help="Line stroke thickness in pixels (default: 3).",
+    )
 
     args = parser.parse_args()
 
@@ -42,6 +61,9 @@ def main() -> None:
     print("Starting detekface live webcam preview...")
     print(f"Camera index : {args.camera_index}")
     print(f"Mirror feed  : {not args.no_mirror}")
+    print(f"Shape overlay: {args.shape}")
+    print(f"Color        : {args.color}")
+    print(f"Thickness    : {args.thickness}")
     print(f"Capture dir  : {args.capture_dir}")
     print("Controls     : Press 'c' to capture face, 'q' or 'Escape' to exit.\n")
 
@@ -50,6 +72,9 @@ def main() -> None:
             camera_index=args.camera_index,
             mirror=not args.no_mirror,
             confidence_threshold=args.confidence,
+            shape=args.shape,
+            color=args.color,
+            thickness=args.thickness,
             capture_dir=args.capture_dir,
             on_capture=handle_capture,
         )

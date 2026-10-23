@@ -116,8 +116,8 @@ def test_cleanup_occurs_on_unexpected_exception(mock_cv2_camera) -> None:
     mock_destroy.assert_called_once()
 
 
-def test_camera_draws_green_box_on_detection(mock_cv2_camera) -> None:
-    """Verify that bounding boxes for detected faces are drawn as green rectangles on the frame."""
+def test_camera_draws_box_on_detection(mock_cv2_camera) -> None:
+    """Verify that bounding boxes for detected faces are rendered on the frame."""
     mock_cap, mock_imshow, mock_wait_key, _ = mock_cv2_camera
     mock_cap.isOpened.return_value = True
 
@@ -131,17 +131,22 @@ def test_camera_draws_green_box_on_detection(mock_cv2_camera) -> None:
     mock_detector = MagicMock()
     mock_detector.detect.return_value = DetectionResult(faces=[mock_detection], image=test_frame)
 
-    with patch("cv2.rectangle") as mock_rectangle:
-        camera(camera_index=0, detector=mock_detector, mirror=False)
-
-        # Expected top-left (20, 30) and bottom-right (20+50=70, 30+60=90), green color (0, 255, 0), thickness 2
-        mock_rectangle.assert_called_once_with(
-            test_frame,
-            (20, 30),
-            (70, 90),
-            (0, 255, 0),
-            2,
+    with patch("detekface.camera.draw_faces") as mock_draw_faces:
+        camera(
+            camera_index=0,
+            detector=mock_detector,
+            mirror=False,
+            shape="corners",
+            color="#FF0000",
+            thickness=4,
         )
+
+        mock_draw_faces.assert_called_once()
+        # Verify passed arguments to draw_faces
+        args, kwargs = mock_draw_faces.call_args
+        assert kwargs["shape"] == "corners"
+        assert kwargs["color"] == (0, 0, 255)  # RGB #FF0000 -> BGR (0, 0, 255)
+        assert kwargs["thickness"] == 4
 
 
 def test_mirror_option_flips_frame(mock_cv2_camera) -> None:
