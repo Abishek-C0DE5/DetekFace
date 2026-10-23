@@ -39,3 +39,23 @@ class ModelCorruptionError(ModelError):
 class ModelCompatibilityError(ModelError):
     """Raised when a model file is incompatible with the installed OpenCV runtime."""
     pass
+
+
+class ImageError(DetekFaceError):
+    """Base exception for image loading, format, and decoding errors."""
+    pass
+
+
+class ImageNotFoundError(ImageError):
+    """Raised when an image file cannot be found at the specified path."""
+    pass
+
+
+class InvalidImageError(ImageError):
+    """Raised when an image file or NumPy array is corrupt, empty, or has unsupported dimensions."""
+    pass
+
+
+class ConfigurationError(DetekFaceError):
+    """Raised when invalid thresholds or configuration parameters are provided."""
+    pass

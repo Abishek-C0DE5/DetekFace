@@ -5,8 +5,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 ## Features (Planned & Roadmap)
 
 - **Milestone 1**: Clean src-layout package foundation, packaging configuration, and test suite.
-- **Milestone 2 (Current)**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
-- **Milestone 3**: Core detector interface, face detections, bounding box & landmark dataclasses.
+- **Milestone 2**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
+- **Milestone 3 (Current)**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
 - **Milestone 4**: Clean visualization & drawing utilities for annotations and bounding boxes.
 - **Milestone 5**: Webcam and real-time video stream support with graceful degradation.
 - **Milestone 6**: Polish, examples, documentation, and PyPI readiness.
@@ -47,17 +47,19 @@ pytest
 
 ```python
 import detekface
-from detekface import resolve_model, verify_model_initialization
 
-print("Version:", detekface.__version__)
+# 1. Detect faces in an image file or NumPy BGR array
+result = detekface.detect("photo.jpg", confidence_threshold=0.7)
 
-# Resolve model (auto-selects compatible YuNet ONNX model, downloads to cache if needed)
-model_path = resolve_model()
-print("Model path:", model_path)
+print(f"Found {result.count} face(s)")
 
-# Verify compatibility with OpenCV
-verify_model_initialization(model_path)
-print("Model verified successfully!")
+for face in result.faces:
+    print("Bounding Box:", face.bbox.as_tuple())  # (x, y, width, height)
+    print("Confidence :", f"{face.confidence * 100:.1f}%")
+    if face.landmarks:
+        print("Right Eye  :", face.landmarks.right_eye.as_tuple())
+        print("Left Eye   :", face.landmarks.left_eye.as_tuple())
+        print("Nose Tip   :", face.landmarks.nose_tip.as_tuple())
 ```
 
 ## Model Licensing & Credits
