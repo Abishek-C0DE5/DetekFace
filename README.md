@@ -10,7 +10,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 - **Milestone 4**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
 - **Milestone 5**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
 - **Milestone 7**: Optional webcam metrics and information overlays (`show_confidence`, `show_fps`, `show_count`), sliding-window smoothed FPS calculation, readable metrics badges, and zero crop pollution.
-- **Milestone 8 (Current)**: Finalized public image API (`result.count`, `result.faces`, `result.show()`, `result.save()`), explicit overlay styling and color options, format validation, and guaranteed clean face cropping.
+- **Milestone 8**: Finalized public image API (`result.count`, `result.faces`, `result.show()`, `result.save()`), explicit overlay styling and color options, format validation, and guaranteed clean face cropping.
+- **Milestone 9 (Current)**: Prerecorded video file face detection (`detekface.video()`), frame-by-frame overlay rendering, annotated video export, dimension and framerate preservation, and headless mode support.
 
 ## Installation
 
@@ -80,6 +81,23 @@ detekface.camera(
     show_fps=True,         # Display smoothed live processing throughput FPS
     show_count=True,       # Display current face count badge
     on_capture=lambda face: print("Captured face to:", face.path),
+)
+```
+
+### 3. Prerecorded Video File Detection & Export
+
+```python
+import detekface
+
+# Process video file, display live preview, and export annotated video
+detekface.video(
+    "clip.mp4",
+    output_path="annotated_clip.mp4",
+    shape="hud",
+    color="#00FF88",
+    show_confidence=True,
+    show_fps=True,
+    show_count=True,
 )
 ```
 

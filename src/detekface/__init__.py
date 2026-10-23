@@ -36,12 +36,16 @@ from detekface.exceptions import (
     ImageSaveError,
     InvalidCropError,
     InvalidImageError,
+    InvalidVideoError,
     ModelCompatibilityError,
     ModelCorruptionError,
     ModelDownloadError,
     ModelError,
     ModelNotFoundError,
     NoFaceDetectedError,
+    VideoError,
+    VideoNotFoundError,
+    VideoWriteError,
 )
 from detekface.models import (
     OFFICIAL_MODELS,
@@ -59,6 +63,7 @@ from detekface.types import (
     FaceLandmarks,
     Point,
 )
+from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
 __version__: str = "0.1.0"
 
@@ -121,6 +126,7 @@ __all__: List[str] = [
     "detect",
     "camera",
     "capture",
+    "video",
     "draw_faces",
     "draw_face_overlay",
     "draw_metrics_overlay",
@@ -131,6 +137,7 @@ __all__: List[str] = [
     "FPSCounter",
     "SUPPORTED_SHAPES",
     "SUPPORTED_IMAGE_EXTENSIONS",
+    "SUPPORTED_VIDEO_EXTENSIONS",
     "NAMED_COLORS",
     "FaceDetector",
     "BoundingBox",
@@ -157,6 +164,10 @@ __all__: List[str] = [
     "NoFaceDetectedError",
     "InvalidCropError",
     "CaptureSaveError",
+    "VideoError",
+    "VideoNotFoundError",
+    "InvalidVideoError",
+    "VideoWriteError",
     "ModelMetadata",
     "OFFICIAL_MODELS",
     "get_cache_dir",

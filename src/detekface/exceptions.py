@@ -99,3 +99,23 @@ class InvalidCropError(CaptureError):
 class CaptureSaveError(CaptureError):
     """Raised when saving a cropped face image to disk fails."""
     pass
+
+
+class VideoError(DetekFaceError):
+    """Base exception for video processing, decoding, and encoding errors."""
+    pass
+
+
+class VideoNotFoundError(VideoError):
+    """Raised when the specified video file cannot be found."""
+    pass
+
+
+class InvalidVideoError(VideoError):
+    """Raised when a video file is corrupt, empty, unreadable, or has an unsupported codec."""
+    pass
+
+
+class VideoWriteError(VideoError):
+    """Raised when writing or encoding an output video fails."""
+    pass
