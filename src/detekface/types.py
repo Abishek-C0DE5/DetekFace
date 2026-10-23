@@ -1,6 +1,7 @@
 """Data structures representing detected faces, bounding boxes, landmarks, and results."""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Tuple
 import numpy as np
 
@@ -189,3 +190,39 @@ class DetectionResult:
     def __repr__(self) -> str:
         img_h, img_w = self.image.shape[:2] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else (0, 0)
         return f"<DetectionResult: {len(self.faces)} face(s) found in {img_w}x{img_h} image>"
+
+
+@dataclass
+class FaceCapture:
+    """A cropped face image captured from a detection result.
+
+    Attributes:
+        image: The cropped face image as a BGR uint8 NumPy array.
+        path: Filesystem Path where the cropped image was saved, or None if not saved.
+        bbox: BoundingBox of the face in the original image coordinates.
+        confidence: Detection confidence score (0.0 to 1.0).
+        landmarks: Facial landmarks if available, otherwise None.
+    """
+
+    image: np.ndarray
+    path: Optional[Path]
+    bbox: BoundingBox
+    confidence: float
+    landmarks: Optional[FaceLandmarks] = None
+
+    @property
+    def width(self) -> int:
+        """Width of the cropped face in pixels."""
+        return self.image.shape[1] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else 0
+
+    @property
+    def height(self) -> int:
+        """Height of the cropped face in pixels."""
+        return self.image.shape[0] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else 0
+
+    def __repr__(self) -> str:
+        saved_info = f", saved to '{self.path}'" if self.path else ""
+        return (
+            f"<FaceCapture: {self.width}x{self.height}px, "
+            f"confidence={self.confidence:.2f}{saved_info}>"
+        )

@@ -7,8 +7,8 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 - **Milestone 1**: Clean src-layout package foundation, packaging configuration, and test suite.
 - **Milestone 2**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
 - **Milestone 3**: Still-image face detection engine, structured dataclasses (`FaceDetection`, `BoundingBox`, `FaceLandmarks`, `DetectionResult`), and input normalization.
-- **Milestone 4 (Current)**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
-- **Milestone 5**: Clean visualization & drawing utilities for annotations and custom styling.
+- **Milestone 4**: Simplest working live webcam experience (`detekface.camera()`), green bounding boxes, Q/Escape exit, and guaranteed resource cleanup.
+- **Milestone 5 (Current)**: Face cropping and capture (`detekface.capture()`), largest-face selection, boundary clamping, disk saving, and interactive 'C' key webcam capture with callbacks.
 - **Milestone 6**: Polish, examples, documentation, and PyPI readiness.
 
 ## Installation
@@ -45,29 +45,30 @@ pytest
 
 ## Quick Verification
 
-### 1. Still-Image Face Detection
+### 1. Still-Image Face Detection & Cropping
 
 ```python
 import detekface
 
+# Detect faces
 result = detekface.detect("photo.jpg", confidence_threshold=0.7)
 print(f"Found {result.count} face(s)")
 
-for face in result.faces:
-    print("Bounding Box:", face.bbox.as_tuple())  # (x, y, width, height)
-    print("Confidence :", f"{face.confidence * 100:.1f}%")
+# Crop and save the largest face
+face = detekface.capture(result, save_dir="captures", filename="my_face.jpg")
+print(f"Captured {face.width}x{face.height}px face to: {face.path}")
 ```
 
-### 2. Live Webcam Face Detection
+### 2. Live Webcam Face Detection & Interactive Capture
 
 ```python
 import detekface
 
-# Open default webcam with live detection (press 'q' or Escape to close)
-detekface.camera()
+def on_face_captured(face):
+    print("New face captured!", face.path)
 
-# Optional: customize camera index and mirror feed
-# detekface.camera(camera_index=0, mirror=False)
+# Open webcam: press 'c' to capture largest face, press 'q' or Escape to close
+detekface.camera(on_capture=on_face_captured)
 ```
 
 ## Model Licensing & Credits

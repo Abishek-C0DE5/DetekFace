@@ -25,19 +25,33 @@ def main() -> None:
         default=0.7,
         help="Face detection confidence threshold between 0.0 and 1.0 (default: 0.7).",
     )
+    parser.add_argument(
+        "--capture-dir",
+        type=str,
+        default="captures",
+        help="Directory where cropped face captures will be saved (default: 'captures').",
+    )
 
     args = parser.parse_args()
+
+    def handle_capture(captured: detekface.FaceCapture) -> None:
+        print(f"\n[CALLBACK] Successfully captured face! Size: {captured.width}x{captured.height}px")
+        if captured.path:
+            print(f"[CALLBACK] File saved at: {captured.path}")
 
     print("Starting detekface live webcam preview...")
     print(f"Camera index : {args.camera_index}")
     print(f"Mirror feed  : {not args.no_mirror}")
-    print("Press 'q' or 'Escape' in the preview window to exit.\n")
+    print(f"Capture dir  : {args.capture_dir}")
+    print("Controls     : Press 'c' to capture face, 'q' or 'Escape' to exit.\n")
 
     try:
         detekface.camera(
             camera_index=args.camera_index,
             mirror=not args.no_mirror,
             confidence_threshold=args.confidence,
+            capture_dir=args.capture_dir,
+            on_capture=handle_capture,
         )
     except detekface.CameraError as e:
         print(f"Camera error: {e}")

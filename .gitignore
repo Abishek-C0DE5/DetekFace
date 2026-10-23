@@ -32,6 +32,9 @@ venv/
 ENV/
 env/
 
+# Captured faces
+captures/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

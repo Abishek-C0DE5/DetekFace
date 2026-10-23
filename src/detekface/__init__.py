@@ -9,21 +9,26 @@ from typing import List, Optional, Union
 import numpy as np
 
 from detekface.camera import camera
+from detekface.capture import capture
 from detekface.detector import FaceDetector
 from detekface.exceptions import (
     CameraError,
     CameraNotFoundError,
     CameraReadError,
+    CaptureError,
+    CaptureSaveError,
     ConfigurationError,
     DetekFaceError,
     ImageError,
     ImageNotFoundError,
+    InvalidCropError,
     InvalidImageError,
     ModelCompatibilityError,
     ModelCorruptionError,
     ModelDownloadError,
     ModelError,
     ModelNotFoundError,
+    NoFaceDetectedError,
 )
 from detekface.models import (
     OFFICIAL_MODELS,
@@ -35,6 +40,7 @@ from detekface.models import (
 from detekface.types import (
     BoundingBox,
     DetectionResult,
+    FaceCapture,
     FaceDetection,
     FaceLandmarks,
     Point,
@@ -100,12 +106,14 @@ __all__: List[str] = [
     "__version__",
     "detect",
     "camera",
+    "capture",
     "FaceDetector",
     "BoundingBox",
     "Point",
     "FaceLandmarks",
     "FaceDetection",
     "DetectionResult",
+    "FaceCapture",
     "DetekFaceError",
     "ModelError",
     "ModelNotFoundError",
@@ -119,6 +127,10 @@ __all__: List[str] = [
     "CameraError",
     "CameraNotFoundError",
     "CameraReadError",
+    "CaptureError",
+    "NoFaceDetectedError",
+    "InvalidCropError",
+    "CaptureSaveError",
     "ModelMetadata",
     "OFFICIAL_MODELS",
     "get_cache_dir",

@@ -74,3 +74,23 @@ class CameraNotFoundError(CameraError):
 class CameraReadError(CameraError):
     """Raised when reading a frame from the camera fails or the stream disconnects."""
     pass
+
+
+class CaptureError(DetekFaceError):
+    """Base exception for face cropping, capturing, and image saving operations."""
+    pass
+
+
+class NoFaceDetectedError(CaptureError):
+    """Raised when capture is invoked on a detection result containing no faces."""
+    pass
+
+
+class InvalidCropError(CaptureError):
+    """Raised when a face bounding box results in an empty or invalid image crop."""
+    pass
+
+
+class CaptureSaveError(CaptureError):
+    """Raised when saving a cropped face image to disk fails."""
+    pass
