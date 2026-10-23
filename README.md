@@ -4,11 +4,12 @@ A reliable, beginner-friendly Python face detection package powered by YuNet and
 
 ## Features (Planned & Roadmap)
 
-- **Milestone 1 (Current)**: Clean src-layout package foundation, packaging configuration, and test suite.
-- **Milestone 2**: Core detector with YuNet ONNX model, bounding box & landmark dataclasses.
-- **Milestone 3**: Clean visualization & drawing utilities for annotations and bounding boxes.
-- **Milestone 4**: Webcam and real-time video stream support with graceful degradation.
-- **Milestone 5**: Polish, examples, documentation, and PyPI readiness.
+- **Milestone 1**: Clean src-layout package foundation, packaging configuration, and test suite.
+- **Milestone 2 (Current)**: Internal model loading system, trusted downloading, caching, SHA256 integrity validation, and OpenCV compatibility.
+- **Milestone 3**: Core detector interface, face detections, bounding box & landmark dataclasses.
+- **Milestone 4**: Clean visualization & drawing utilities for annotations and bounding boxes.
+- **Milestone 5**: Webcam and real-time video stream support with graceful degradation.
+- **Milestone 6**: Polish, examples, documentation, and PyPI readiness.
 
 ## Installation
 
@@ -46,9 +47,28 @@ pytest
 
 ```python
 import detekface
+from detekface import resolve_model, verify_model_initialization
 
-print(detekface.__version__)
+print("Version:", detekface.__version__)
+
+# Resolve model (auto-selects compatible YuNet ONNX model, downloads to cache if needed)
+model_path = resolve_model()
+print("Model path:", model_path)
+
+# Verify compatibility with OpenCV
+verify_model_initialization(model_path)
+print("Model verified successfully!")
 ```
+
+## Model Licensing & Credits
+
+`detekface` utilizes the official **YuNet** face detection model created by Shiqi Yu and maintained in the [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet):
+- **Model Author**: Shiqi Yu (`libfacedetection`) & Shenzhen Institute of Artificial Intelligence and Robotics for Society
+- **Model License**: MIT License (Copyright (c) 2020 Shiqi Yu)
+- **Primary Source**: OpenCV Model Zoo (`https://github.com/opencv/opencv_zoo`)
+- **Compatibility**:
+  - `face_detection_yunet_2026may.onnx`: Dynamic input shape for OpenCV 5.x graph engine.
+  - `face_detection_yunet_2023mar.onnx`: Fixed input shape for OpenCV 4.x DNN engine.
 
 ## License
 

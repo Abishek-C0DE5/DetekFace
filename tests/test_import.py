@@ -19,6 +19,8 @@ def test_package_version() -> None:
 
 
 def test_package_all_export() -> None:
-    """Verify that __all__ is properly exposed."""
+    """Verify that __all__ is properly exposed and all symbols exist."""
     assert hasattr(detekface, "__all__")
     assert "__version__" in detekface.__all__
+    for symbol in detekface.__all__:
+        assert hasattr(detekface, symbol), f"Exported symbol '{symbol}' is missing from detekface"
