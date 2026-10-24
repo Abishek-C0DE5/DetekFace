@@ -35,6 +35,11 @@ env/
 # Captured faces
 captures/
 
+# Validation datasets & downloads (keep large datasets out of repo)
+validation/data/
+validation/downloads/
+validation/benchmark_cache/
+
 # Unit test / coverage reports
 htmlcov/
 .tox/

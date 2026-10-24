@@ -1,0 +1,221 @@
+{
+  "version": "1.0",
+  "description": "DetekFace Reproducible Quality Validation Suite Manifest",
+  "default_iou_threshold": 0.50,
+  "license_policy": "All included and downloaded images are sourced from permissive open-source repositories (OpenCV Apache-2.0 / BSD-3-Clause) or U.S. Federal Government works in the Public Domain (17 U.S.C. § 105). Large datasets are kept out of the repository; evaluation images are managed via download/generation scripts.",
+  "images": [
+    {
+      "id": "val_01_no_face_fruits",
+      "filename": "fruits.jpg",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/fruits.jpg",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 480,
+      "scenarios": ["no_faces"],
+      "faces": [],
+      "notes": "Natural still life containing fruit objects and textures with zero human faces. Tests False Positive (FP) suppression."
+    },
+    {
+      "id": "val_02_no_face_building",
+      "filename": "building.jpg",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/building.jpg",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 868,
+      "height": 600,
+      "scenarios": ["no_faces"],
+      "faces": [],
+      "notes": "Architectural building facade with geometric window patterns and high-frequency textures with zero human faces."
+    },
+    {
+      "id": "val_03_no_face_baboon",
+      "filename": "baboon.jpg",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/baboon.jpg",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 512,
+      "scenarios": ["no_faces"],
+      "faces": [],
+      "notes": "Non-human primate face with whiskers and fur. Tests human vs animal face discrimination (expected 0 human faces)."
+    },
+    {
+      "id": "val_04_single_frontal_lena",
+      "filename": "sample_face.jpg",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/lena.jpg",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 512,
+      "scenarios": ["one_face", "diverse_appearances"],
+      "faces": [
+        {
+          "bbox": [205, 185, 150, 205],
+          "attributes": {
+            "pose": "frontal_slight_tilt",
+            "lighting": "standard_studio",
+            "demographic": "adult_female"
+          }
+        }
+      ],
+      "notes": "Standard single portrait with slight head tilt and hat. Benchmark reference image."
+    },
+    {
+      "id": "val_05_multi_face_karen_rob",
+      "filename": "karen_and_rob.png",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/cv/cascadeandhog/images/karen-and-rob.png",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 336,
+      "height": 484,
+      "scenarios": ["multiple_faces", "diverse_appearances"],
+      "faces": [
+        {
+          "bbox": [190, 30, 50, 65],
+          "attributes": {
+            "demographic": "adult_male",
+            "pose": "frontal"
+          }
+        },
+        {
+          "bbox": [82, 185, 52, 65],
+          "attributes": {
+            "demographic": "adult_female",
+            "pose": "frontal"
+          }
+        }
+      ],
+      "notes": "Authentic two-person photograph containing an adult male and adult female at different vertical/depth levels."
+    },
+    {
+      "id": "val_06_small_distant_messi",
+      "filename": "messi5.jpg",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv/master/samples/data/messi5.jpg",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 548,
+      "height": 342,
+      "scenarios": ["small_and_distant_faces", "one_face"],
+      "faces": [
+        {
+          "bbox": [224, 90, 35, 45],
+          "attributes": {
+            "size": "small_distant_35px",
+            "lighting": "outdoor_daylight"
+          }
+        }
+      ],
+      "notes": "Full-body soccer player on a field. The face occupies less than 6% of frame width (< 40px), testing small/distant face detection."
+    },
+    {
+      "id": "val_07_border_adjacent_face",
+      "filename": "border_face.jpg",
+      "source_url": "Derived from sample_face.jpg (OpenCV, Apache-2.0 / BSD-3-Clause)",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 304,
+      "height": 512,
+      "scenarios": ["faces_near_borders", "one_face"],
+      "faces": [
+        {
+          "bbox": [0, 185, 145, 205],
+          "attributes": {
+            "touches_border": "left_x0",
+            "pose": "frontal"
+          }
+        }
+      ],
+      "notes": "Face aligned directly along the left edge of the image canvas (x=0), testing boundary detection and coordinate clamping."
+    },
+    {
+      "id": "val_08_lighting_low_light",
+      "filename": "lighting_low_light.jpg",
+      "source_url": "Derived from sample_face.jpg (OpenCV, Apache-2.0 / BSD-3-Clause)",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 512,
+      "scenarios": ["different_lighting", "one_face"],
+      "faces": [
+        {
+          "bbox": [205, 185, 150, 205],
+          "attributes": {
+            "lighting_condition": "underexposed_low_lux",
+            "pose": "frontal"
+          }
+        }
+      ],
+      "notes": "Severely underexposed low-light condition (gamma/lux reduced to 20%), testing photon-starved detector sensitivity."
+    },
+    {
+      "id": "val_09_lighting_harsh_shadow",
+      "filename": "lighting_harsh_shadow.jpg",
+      "source_url": "Derived from sample_face.jpg (OpenCV, Apache-2.0 / BSD-3-Clause)",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 512,
+      "scenarios": ["different_lighting", "one_face"],
+      "faces": [
+        {
+          "bbox": [205, 185, 150, 205],
+          "attributes": {
+            "lighting_condition": "harsh_split_side_shadow",
+            "pose": "frontal"
+          }
+        }
+      ],
+      "notes": "Harsh directional side lighting creating strong shadows across half the facial structure, testing illumination contrast robustness."
+    },
+    {
+      "id": "val_10_head_angle_mona_lisa",
+      "filename": "mona_lisa.png",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/cv/cascadeandhog/images/mona-lisa.png",
+      "license": "Public Domain / Apache-2.0",
+      "width": 520,
+      "height": 739,
+      "scenarios": ["different_head_angles", "one_face"],
+      "faces": [
+        {
+          "bbox": [185, 100, 125, 175],
+          "attributes": {
+            "pose": "three_quarters_yaw",
+            "lighting": "sfumato_soft"
+          }
+        }
+      ],
+      "notes": "Three-quarters turned head angle (yaw) with non-frontal orientation and soft classical lighting."
+    },
+    {
+      "id": "val_11_occluded_sunglasses",
+      "filename": "occluded_sunglasses.jpg",
+      "source_url": "Derived from sample_face.jpg (OpenCV, Apache-2.0 / BSD-3-Clause)",
+      "license": "Apache-2.0 / BSD-3-Clause",
+      "width": 512,
+      "height": 512,
+      "scenarios": ["partially_occluded", "one_face"],
+      "faces": [
+        {
+          "bbox": [205, 185, 150, 205],
+          "attributes": {
+            "occlusion": "eyes_dark_sunglasses",
+            "pose": "frontal"
+          }
+        }
+      ],
+      "notes": "Subject wearing dark opaque sunglasses obscuring both orbital eye sockets, testing robustness to common accessories."
+    },
+    {
+      "id": "val_12_diverse_elderly_hopper",
+      "filename": "grace_hopper.png",
+      "source_url": "https://raw.githubusercontent.com/opencv/opencv_extra/master/testdata/dnn/grace_hopper_227.png",
+      "license": "Public Domain (U.S. Navy official photography / 17 U.S.C. § 105)",
+      "width": 227,
+      "height": 227,
+      "scenarios": ["diverse_appearances", "one_face", "partially_occluded"],
+      "faces": [
+        {
+          "bbox": [75, 40, 85, 95],
+          "attributes": {
+            "demographic": "elderly_female",
+            "occlusion": "military_service_cap",
+            "pose": "slight_profile"
+          }
+        }
+      ],
+      "notes": "U.S. Navy Admiral Grace Hopper in military uniform with cap covering forehead. Covers elderly demographic and uniform accessories."
+    }
+  ]
+}

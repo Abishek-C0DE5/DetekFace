@@ -495,6 +495,15 @@ Resolution   | Mean Latency | Median Latency | P95 Latency | Throughput (FPS)
 
 </details>
 
+Execute the reproducible quality validation suite comparing backends across real-world challenge scenarios (no faces, distant faces, low light, harsh shadows, profile angles, occlusions):
+
+```powershell
+python validation/download_dataset.py
+python validation/evaluate.py --compare
+```
+
+See the **[Quality Validation Methodology & Benchmark Guide](docs/validation.md)** for mathematical metric definitions (Precision, Recall, F1, IoU), dataset licensing, and detailed backend tradeoffs.
+
 ---
 
 ## 18. Development Setup & Contributing
