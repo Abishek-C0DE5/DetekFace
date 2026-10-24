@@ -9,9 +9,7 @@ large or binary assets out of the source repository).
 """
 
 import argparse
-import hashlib
 import json
-import os
 from pathlib import Path
 import shutil
 import sys
@@ -41,7 +39,10 @@ def download_file(url: str, dest: Path, timeout: int = 15) -> bool:
     """Download a file with user-agent headers and timeout."""
     req = urllib.request.Request(url, headers={"User-Agent": "DetekFace-Validation/1.0"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp, open(dest, "wb") as f:
+        with (
+            urllib.request.urlopen(req, timeout=timeout) as resp,
+            open(dest, "wb") as f,
+        ):
             f.write(resp.read())
         return True
     except Exception as e:

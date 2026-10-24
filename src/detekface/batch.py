@@ -37,7 +37,7 @@ class BatchItemResult:
     def faces(self) -> List[FaceDetection]:
         """List of detected faces if successful, or an empty list if failed."""
         if self.result is not None:
-            return self.result.faces
+            return list(self.result.faces)
         return []
 
     @property
@@ -134,13 +134,9 @@ def _resolve_batch_inputs(
         if p.is_dir():
             if recursive:
                 return [
-                    f for f in sorted(p.rglob("*"))
-                    if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
+                    f for f in sorted(p.rglob("*")) if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                 ]
-            return [
-                f for f in sorted(p.iterdir())
-                if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
-            ]
+            return [f for f in sorted(p.iterdir()) if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS]
         return [images]
 
     resolved: List[Union[str, Path, np.ndarray]] = []
@@ -151,14 +147,16 @@ def _resolve_batch_inputs(
                 if recursive:
                     resolved.extend(
                         [
-                            f for f in sorted(p.rglob("*"))
+                            f
+                            for f in sorted(p.rglob("*"))
                             if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                         ]
                     )
                 else:
                     resolved.extend(
                         [
-                            f for f in sorted(p.iterdir())
+                            f
+                            for f in sorted(p.iterdir())
                             if f.is_file() and f.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
                         ]
                     )

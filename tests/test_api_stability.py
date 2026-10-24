@@ -22,10 +22,6 @@ import pytest
 import detekface
 from detekface import (
     BoundingBox,
-    CameraError,
-    CameraNotFoundError,
-    CameraReadError,
-    CaptureError,
     ConfigurationError,
     DetectionResult,
     FaceCapture,
@@ -35,12 +31,9 @@ from detekface import (
     ImageNotFoundError,
     InvalidImageError,
     InvalidSettingError,
-    InvalidVideoError,
     NoFaceDetectedError,
     Point,
-    VideoNotFoundError,
     camera,
-    capture,
     detect,
     draw_faces,
     video,
@@ -50,6 +43,7 @@ from detekface import (
 # =========================================================================
 # 1. Coordinate Conventions & Data Structure Properties
 # =========================================================================
+
 
 def test_point_representation_and_conversions():
     """Verify Point attributes, as_tuple(), and as_int_tuple()."""
@@ -115,6 +109,7 @@ def test_face_landmarks_conventions_and_aliases():
 # =========================================================================
 # 2. Zero Detections Handling
 # =========================================================================
+
 
 def test_zero_detections_image():
     """Verify DetectionResult properties and methods when zero faces are detected."""
@@ -183,12 +178,13 @@ def test_zero_detections_camera():
 # 3. Multiple Detections Handling
 # =========================================================================
 
+
 def test_multiple_detections_handling(tmp_path: Path):
     """Verify handling of multiple faces: iteration, indexing, and capture selection."""
     img = np.full((400, 500, 3), 100, dtype=np.uint8)
     f1 = FaceDetection(bbox=BoundingBox(10, 10, 40, 40), confidence=0.85)  # area 1600
-    f2 = FaceDetection(bbox=BoundingBox(100, 100, 80, 80), confidence=0.95) # area 6400 (largest)
-    f3 = FaceDetection(bbox=BoundingBox(250, 200, 50, 50), confidence=0.90) # area 2500
+    f2 = FaceDetection(bbox=BoundingBox(100, 100, 80, 80), confidence=0.95)  # area 6400 (largest)
+    f3 = FaceDetection(bbox=BoundingBox(250, 200, 50, 50), confidence=0.90)  # area 2500
 
     result = DetectionResult(faces=[f1, f2, f3], image=img)
     assert result.count == 3
@@ -214,6 +210,7 @@ def test_multiple_detections_handling(tmp_path: Path):
 # =========================================================================
 # 4. Invalid Settings Validation
 # =========================================================================
+
 
 def test_invalid_settings_raise_useful_errors():
     """Verify that invalid shapes, colors, and thickness raise InvalidSettingError with hints."""
@@ -273,6 +270,7 @@ def test_invalid_image_inputs_raise_errors():
 # 5. Callback Error Handling & Exception Safety
 # =========================================================================
 
+
 def test_camera_capture_callback_error_does_not_crash(tmp_path: Path):
     """Verify that an exception inside the on_capture callback is safely caught."""
     dummy_frame = np.full((100, 100, 3), 150, dtype=np.uint8)
@@ -327,12 +325,19 @@ def test_video_capture_callback_error_does_not_crash(tmp_path: Path):
         patch("cv2.waitKey", side_effect=[ord("c"), ord("q")]),
         patch("cv2.destroyAllWindows"),
     ):
-        video(vid_file, detector=mock_detector, show=True, on_capture=bad_callback, capture_dir=tmp_path)
+        video(
+            vid_file,
+            detector=mock_detector,
+            show=True,
+            on_capture=bad_callback,
+            capture_dir=tmp_path,
+        )
 
 
 # =========================================================================
 # 6. Resource Cleanup Verification
 # =========================================================================
+
 
 def test_camera_resource_cleanup_on_exception():
     """Verify camera release and destroyAllWindows are called when an unhandled exception occurs."""
@@ -373,6 +378,7 @@ def test_video_resource_cleanup_on_exception(tmp_path: Path):
 # =========================================================================
 # 7. FaceCapture.save() and FaceCapture.show()
 # =========================================================================
+
 
 def test_face_capture_save_method(tmp_path: Path):
     """Verify that FaceCapture.save() saves in-memory crop to disk and updates .path."""
@@ -422,6 +428,7 @@ def test_face_capture_show_method():
 # =========================================================================
 # 8. Frame Distinction Verification
 # =========================================================================
+
 
 def test_original_frame_distinction_from_annotated_and_crops():
     """Verify that original frame remains unpolluted after annotate(), render(), and capture()."""

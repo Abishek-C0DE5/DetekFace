@@ -256,7 +256,8 @@ def video(
             if writer is None and target_output is not None:
                 frame_h, frame_w = frame.shape[:2]
                 try:
-                    fourcc = cv2.VideoWriter_fourcc(*fourcc_code)
+                    fourcc_func = getattr(cv2, "VideoWriter_fourcc", None) or getattr(cv2.VideoWriter, "fourcc")
+                    fourcc = fourcc_func(*fourcc_code)
                     writer = cv2.VideoWriter(str(target_output), fourcc, video_fps, (frame_w, frame_h))
                 except Exception as e:
                     raise VideoWriteError(
@@ -277,6 +278,7 @@ def video(
             should_detect = (frame_skip == 0) or (frames_processed % (frame_skip + 1) == 0) or (latest_result is None)
             if should_detect:
                 latest_result = detector.detect(clean_frame)
+            assert latest_result is not None
             result = latest_result
 
             # Draw overlays on display/output frame

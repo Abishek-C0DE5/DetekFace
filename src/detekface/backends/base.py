@@ -5,7 +5,7 @@ into detekface's canonical result dataclasses.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List
 import numpy as np
 
 from detekface.types import FaceDetection

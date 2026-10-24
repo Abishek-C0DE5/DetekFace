@@ -8,11 +8,7 @@ from detekface import (
     BoundingBox,
     ConfigurationError,
     DetectionResult,
-    FaceCapture,
     FaceDetection,
-    NAMED_COLORS,
-    SUPPORTED_SHAPES,
-    camera,
     capture,
     draw_face_overlay,
     draw_faces,
@@ -20,7 +16,13 @@ from detekface import (
 )
 
 
-def _create_sample_face(x: int = 20, y: int = 20, width: int = 40, height: int = 50, confidence: float = 0.95) -> FaceDetection:
+def _create_sample_face(
+    x: int = 20,
+    y: int = 20,
+    width: int = 40,
+    height: int = 50,
+    confidence: float = 0.95,
+) -> FaceDetection:
     """Helper to create a sample FaceDetection."""
     bbox = BoundingBox(x=x, y=y, width=width, height=height)
     return FaceDetection(bbox=bbox, confidence=confidence)
@@ -63,7 +65,7 @@ def test_invalid_color_raises_configuration_error() -> None:
     with pytest.raises(ConfigurationError):
         parse_color_to_bgr("#GG0011")  # invalid hex digits
     with pytest.raises(ConfigurationError):
-        parse_color_to_bgr("#12345")   # invalid length
+        parse_color_to_bgr("#12345")  # invalid length
     with pytest.raises(ConfigurationError):
         parse_color_to_bgr("rainbow_color")  # unknown name
     with pytest.raises(ConfigurationError):

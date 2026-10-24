@@ -1,0 +1,255 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system dependencies for OpenCV
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - name: Install package and developer tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,mediapipe]"
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check .
+
+      - name: Run Ruff Formatter Check
+        run: |
+          ruff format --check .
+
+      - name: Run Mypy Type Checker
+        run: |
+          mypy
+
+  test-base:
+    name: Unit Tests (${{ matrix.os }} - Py${{ matrix.python-version }})
+    needs: [lint-and-typecheck]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        exclude:
+          # Run full version suite on Ubuntu Linux; representative versions on Windows and macOS
+          - os: windows-latest
+            python-version: "3.9"
+          - os: windows-latest
+            python-version: "3.11"
+          - os: windows-latest
+            python-version: "3.13"
+          - os: macos-latest
+            python-version: "3.9"
+          - os: macos-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.13"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install system dependencies for OpenCV (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - name: Install base package (NO optional backends)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Verify base import without optional dependencies
+        run: |
+          python -c "import detekface; print('DetekFace version:', detekface.__version__)"
+
+      - name: Run offline unit test suite
+        run: |
+          pytest -v -m "not network and not optional_backend"
+
+  test-optional-backends:
+    name: Optional Backend Tests (${{ matrix.os }} - Py${{ matrix.python-version }})
+    needs: [lint-and-typecheck]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        exclude:
+          - os: windows-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.10"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+
+      - name: Install system dependencies for OpenCV (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - name: Install package with MediaPipe backend extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,mediapipe]"
+
+      - name: Verify optional backend import
+        run: |
+          python -c "import mediapipe; import detekface; print('MediaPipe:', mediapipe.__version__)"
+
+      - name: Run optional backend test suite
+        run: |
+          pytest -v -m "optional_backend"
+
+  model-integration-tests:
+    name: Model & Download Integration Tests (Ubuntu - Py3.11)
+    needs: [lint-and-typecheck]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system dependencies for OpenCV
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - name: Install package and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run network-dependent model tests
+        run: |
+          pytest -v -m "network"
+
+  build-and-verify-dist:
+    name: Distribution Build & Install Check (${{ matrix.os }})
+    needs: [lint-and-typecheck]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install build and packaging tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+
+      - name: Build sdist and wheel
+        run: |
+          python -m build
+
+      - name: Strict Twine metadata check
+        run: |
+          twine check --strict dist/*
+
+      - name: Upload distribution artifacts
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-distributions
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Install system dependencies for OpenCV (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+
+      - name: Install built wheel (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          pip install dist/*.whl
+
+      - name: Install built wheel (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wheel = (Get-ChildItem dist/*.whl).FullName
+          pip install $wheel
+
+      - name: Verify package import from installed wheel (outside source tree)
+        run: |
+          python -c "import detekface; print('DetekFace installed successfully:', detekface.__version__)"
+
+      - name: Verify CLI console script
+        run: |
+          detekface --version
+          detekface --help
+          detekface camera --help
+          detekface image --help
+          detekface batch --help
+          detekface video --help

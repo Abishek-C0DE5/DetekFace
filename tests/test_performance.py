@@ -8,7 +8,7 @@ import pytest
 
 import detekface
 from detekface.backends.yunet import YuNetBackend
-from detekface.camera import CameraSession, camera, open_camera
+from detekface.camera import CameraSession, open_camera
 from detekface.detector import (
     FaceDetector,
     _scale_point,
@@ -23,6 +23,7 @@ from detekface.video import video
 # =========================================================================
 # 1. Coordinate Transformation & Clamping
 # =========================================================================
+
 
 def test_scale_point_scaling_and_clamping():
     """Verify landmark point scaling and bounding clamping."""
@@ -113,6 +114,7 @@ def test_transform_detections_clamping_edge_cases():
 # 2. Input Size Validation & Configuration
 # =========================================================================
 
+
 def test_validate_input_size_valid():
     """Verify valid input sizes are normalized to (int, int)."""
     assert _validate_input_size(None) is None
@@ -151,6 +153,7 @@ def test_detector_input_size_property():
 # =========================================================================
 # 3. High-Resolution Face Crop Preservation with Scaled Inference
 # =========================================================================
+
 
 def test_high_resolution_face_crop_preservation():
     """Verify that when input_size is scaled down, the returned image is pristine full resolution."""
@@ -197,6 +200,7 @@ def test_high_resolution_face_crop_preservation():
 # 4. Redundant setInputSize Caching
 # =========================================================================
 
+
 def test_yunet_set_input_size_caching():
     """Verify YuNetBackend caches input size to avoid redundant setInputSize calls."""
     backend = YuNetBackend()
@@ -226,6 +230,7 @@ def test_yunet_set_input_size_caching():
 # 5. Video Frame Skipping
 # =========================================================================
 
+
 def test_video_frame_skipping(tmp_path: Path):
     """Verify video(frame_skip=N) skips inference on intermediate frames while writing all frames."""
     vid_file = tmp_path / "skip_test.mp4"
@@ -238,7 +243,9 @@ def test_video_frame_skipping(tmp_path: Path):
     writer.release()
 
     mock_detector = MagicMock()
-    mock_detector.detect.return_value = detekface.types.DetectionResult(faces=[], image=np.zeros((100, 100, 3), dtype=np.uint8))
+    mock_detector.detect.return_value = detekface.types.DetectionResult(
+        faces=[], image=np.zeros((100, 100, 3), dtype=np.uint8)
+    )
 
     # frame_skip=2: detect on frame 0, 3, 6 (total 3 detections for 9 frames)
     video(
@@ -266,6 +273,7 @@ def test_video_frame_skip_invalid(invalid_skip, tmp_path: Path):
 # =========================================================================
 # 6. Camera Resolution & Memory Semantics
 # =========================================================================
+
 
 def test_camera_resolution_negotiation():
     """Verify CameraSession sets CAP_PROP_FRAME_WIDTH and CAP_PROP_FRAME_HEIGHT when resolution is provided."""

@@ -15,7 +15,6 @@ from detekface.detector import FaceDetector
 from detekface.exceptions import (
     ConfigurationError,
     InvalidVideoError,
-    VideoError,
     VideoNotFoundError,
     VideoWriteError,
 )
@@ -52,6 +51,7 @@ def synthetic_video_path(tmp_path: Path) -> Path:
 # -------------------------------------------------------------------------
 # Check 1 & Check 3: Video Processing, Dimensions, Output, Cleanup
 # -------------------------------------------------------------------------
+
 
 def test_video_headless_processing(synthetic_video_path):
     """Test detekface.video() processes a video file end-to-end headlessly."""
@@ -143,6 +143,7 @@ def test_video_creates_nested_output_directory(synthetic_video_path, tmp_path):
 # Check 2: Invalid Paths, Read Failures, and Error Handling
 # -------------------------------------------------------------------------
 
+
 def test_nonexistent_video_path_raises_not_found():
     """Verify nonexistent path raises VideoNotFoundError."""
     with pytest.raises(VideoNotFoundError) as exc_info:
@@ -206,6 +207,7 @@ def test_simulated_read_exception_guarantees_cleanup(synthetic_video_path):
 # Output Path & Codec Validation
 # -------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "bad_ext",
     [
@@ -259,11 +261,12 @@ def test_video_writer_open_failure_raises_video_write_error(synthetic_video_path
 # GUI, Keyboard Controls, and Cleanup
 # -------------------------------------------------------------------------
 
+
 def test_video_gui_early_exit_on_q_key(synthetic_video_path):
     """Verify pressing 'q' breaks loop and destroys OpenCV windows."""
     with (
         patch("cv2.imshow") as mock_imshow,
-        patch("cv2.waitKey", return_value=ord("q")) as mock_wait_key,
+        patch("cv2.waitKey", return_value=ord("q")),
         patch("cv2.destroyAllWindows") as mock_destroy,
     ):
         detekface.video(synthetic_video_path, show=True)
@@ -319,6 +322,7 @@ def test_video_interactive_capture_key(synthetic_video_path, tmp_path):
 # -------------------------------------------------------------------------
 # Display Flags Validation
 # -------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "flag_name, bad_value",

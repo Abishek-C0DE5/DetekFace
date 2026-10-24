@@ -85,11 +85,13 @@ def run_threshold_sweep(detector: detekface.FaceDetector, asset_path: Path) -> L
         detector_thresh = detekface.FaceDetector(confidence_threshold=thresh)
         res = detector_thresh.detect(img)
         confidences = [round(f.confidence, 4) for f in res.faces]
-        results.append({
-            "threshold": thresh,
-            "count": res.count,
-            "confidences": confidences,
-        })
+        results.append(
+            {
+                "threshold": thresh,
+                "count": res.count,
+                "confidences": confidences,
+            }
+        )
 
     return results
 
@@ -111,8 +113,8 @@ def main() -> None:
     print(f"Resolved Model  : {detector.model_path.name}")
 
     resolutions = [
-        (320, 240),   # QVGA
-        (640, 480),   # VGA / Standard Webcam
+        (320, 240),  # QVGA
+        (640, 480),  # VGA / Standard Webcam
         (1280, 720),  # 720p HD
     ]
 

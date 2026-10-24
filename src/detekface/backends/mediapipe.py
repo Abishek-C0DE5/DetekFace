@@ -16,12 +16,12 @@ Installation:
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 import cv2
 import numpy as np
 
 from detekface.backends.base import BaseFaceBackend
-from detekface.exceptions import DependencyNotFoundError, ModelError
+from detekface.exceptions import DependencyNotFoundError
 from detekface.models import resolve_mediapipe_model
 from detekface.types import BoundingBox, FaceDetection, FaceLandmarks, Point
 
@@ -41,7 +41,7 @@ class MediaPipeBackend(BaseFaceBackend):
 
         # Attempt to import mediapipe dynamically
         try:
-            import mediapipe as mp
+            import mediapipe as mp  # type: ignore[import-untyped]
         except ImportError as e:
             raise DependencyNotFoundError(
                 message="The 'mediapipe' backend requires the optional 'mediapipe' package.",
@@ -49,14 +49,14 @@ class MediaPipeBackend(BaseFaceBackend):
             ) from e
 
         self._mp = mp
-        self._detector = None
+        self._detector: Any = None
         self._is_tasks_api = False
         self._model_path: Optional[Path] = None
 
         # Check for Tasks API (MediaPipe 0.10.x / 1.x+)
         try:
-            from mediapipe.tasks.python import vision
-            from mediapipe.tasks.python.core.base_options import BaseOptions
+            from mediapipe.tasks.python import vision  # type: ignore[import-untyped]
+            from mediapipe.tasks.python.core.base_options import BaseOptions  # type: ignore[import-untyped]
 
             # Resolve MediaPipe model file
             self._model_path = resolve_mediapipe_model(model, cache_dir=cache_dir)
@@ -105,6 +105,7 @@ class MediaPipeBackend(BaseFaceBackend):
         return self._detect_solutions(rgb_image, width, height)
 
     def _detect_tasks(self, rgb_image: np.ndarray, width: int, height: int) -> List[FaceDetection]:
+        assert self._detector is not None
         mp_image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb_image)
         results = self._detector.detect(mp_image)
 
@@ -128,12 +129,30 @@ class MediaPipeBackend(BaseFaceBackend):
             # 0: right eye, 1: left eye, 2: nose tip, 3: mouth center, 4: right ear, 5: left ear
             landmarks = None
             if hasattr(d, "keypoints") and len(d.keypoints) >= 6:
-                right_eye = Point(int(round(d.keypoints[0].x * width)), int(round(d.keypoints[0].y * height)))
-                left_eye = Point(int(round(d.keypoints[1].x * width)), int(round(d.keypoints[1].y * height)))
-                nose_tip = Point(int(round(d.keypoints[2].x * width)), int(round(d.keypoints[2].y * height)))
-                mouth_center = Point(int(round(d.keypoints[3].x * width)), int(round(d.keypoints[3].y * height)))
-                right_ear = Point(int(round(d.keypoints[4].x * width)), int(round(d.keypoints[4].y * height)))
-                left_ear = Point(int(round(d.keypoints[5].x * width)), int(round(d.keypoints[5].y * height)))
+                right_eye = Point(
+                    int(round(d.keypoints[0].x * width)),
+                    int(round(d.keypoints[0].y * height)),
+                )
+                left_eye = Point(
+                    int(round(d.keypoints[1].x * width)),
+                    int(round(d.keypoints[1].y * height)),
+                )
+                nose_tip = Point(
+                    int(round(d.keypoints[2].x * width)),
+                    int(round(d.keypoints[2].y * height)),
+                )
+                mouth_center = Point(
+                    int(round(d.keypoints[3].x * width)),
+                    int(round(d.keypoints[3].y * height)),
+                )
+                right_ear = Point(
+                    int(round(d.keypoints[4].x * width)),
+                    int(round(d.keypoints[4].y * height)),
+                )
+                left_ear = Point(
+                    int(round(d.keypoints[5].x * width)),
+                    int(round(d.keypoints[5].y * height)),
+                )
 
                 landmarks = FaceLandmarks(
                     right_eye=right_eye,
@@ -151,6 +170,7 @@ class MediaPipeBackend(BaseFaceBackend):
         return detections
 
     def _detect_solutions(self, rgb_image: np.ndarray, width: int, height: int) -> List[FaceDetection]:
+        assert self._detector is not None
         results = self._detector.process(rgb_image)
         if not results.detections:
             return []
@@ -169,12 +189,30 @@ class MediaPipeBackend(BaseFaceBackend):
             landmarks = None
             keypoints = getattr(d.location_data, "relative_keypoints", [])
             if len(keypoints) >= 6:
-                right_eye = Point(int(round(keypoints[0].x * width)), int(round(keypoints[0].y * height)))
-                left_eye = Point(int(round(keypoints[1].x * width)), int(round(keypoints[1].y * height)))
-                nose_tip = Point(int(round(keypoints[2].x * width)), int(round(keypoints[2].y * height)))
-                mouth_center = Point(int(round(keypoints[3].x * width)), int(round(keypoints[3].y * height)))
-                right_ear = Point(int(round(keypoints[4].x * width)), int(round(keypoints[4].y * height)))
-                left_ear = Point(int(round(keypoints[5].x * width)), int(round(keypoints[5].y * height)))
+                right_eye = Point(
+                    int(round(keypoints[0].x * width)),
+                    int(round(keypoints[0].y * height)),
+                )
+                left_eye = Point(
+                    int(round(keypoints[1].x * width)),
+                    int(round(keypoints[1].y * height)),
+                )
+                nose_tip = Point(
+                    int(round(keypoints[2].x * width)),
+                    int(round(keypoints[2].y * height)),
+                )
+                mouth_center = Point(
+                    int(round(keypoints[3].x * width)),
+                    int(round(keypoints[3].y * height)),
+                )
+                right_ear = Point(
+                    int(round(keypoints[4].x * width)),
+                    int(round(keypoints[4].y * height)),
+                )
+                left_ear = Point(
+                    int(round(keypoints[5].x * width)),
+                    int(round(keypoints[5].y * height)),
+                )
 
                 landmarks = FaceLandmarks(
                     right_eye=right_eye,

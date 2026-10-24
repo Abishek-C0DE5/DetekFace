@@ -20,6 +20,7 @@ This guide provides actionable solutions to common issues encountered when insta
    - If using an external USB webcam alongside an integrated laptop webcam, the device index might be `1` or `2`:
      ```python
      import detekface
+
      detekface.camera(camera_index=1)
      ```
 4. **Physical Shutter or Hardware Switch**:
@@ -99,6 +100,7 @@ You can download the model weights once on any computer and provide them locally
 3. Alternatively, supply the explicit local file path in Python:
    ```python
    import detekface
+
    result = detekface.detect("photo.jpg", model="path/to/face_detection_yunet_2023mar.onnx")
    ```
 

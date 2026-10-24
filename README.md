@@ -202,15 +202,15 @@ Launch the camera with custom options:
 import detekface
 
 detekface.camera(
-    camera_index=0,        # 0 for default webcam, 1 for external USB camera
-    mirror=True,           # Horizontally flip for natural mirror view
+    camera_index=0,  # 0 for default webcam, 1 for external USB camera
+    mirror=True,  # Horizontally flip for natural mirror view
     confidence_threshold=0.7,
-    shape="hud",           # 'rectangle', 'corners', 'circle', 'rounded', 'hud'
-    color="#00FF88",       # Hex code or name ('cyan', 'neon_green', 'red', etc.)
-    thickness=3,           # Stroke width in pixels
+    shape="hud",  # 'rectangle', 'corners', 'circle', 'rounded', 'hud'
+    color="#00FF88",  # Hex code or name ('cyan', 'neon_green', 'red', etc.)
+    thickness=3,  # Stroke width in pixels
     show_confidence=True,  # Show confidence score near face
-    show_fps=True,         # Show smoothed real-time FPS
-    show_count=True,       # Show current face count
+    show_fps=True,  # Show smoothed real-time FPS
+    show_count=True,  # Show current face count
 )
 ```
 
@@ -264,8 +264,8 @@ print(f"Saved {face.width}x{face.height}px crop to: {face.path}")
 
 # 2. Capture in-memory without saving to disk
 memory_face = result.capture(face_index=0, save=False)
-bgr_array = memory_face.image     # NumPy array in BGR format
-rgb_array = memory_face.rgb_image # NumPy array converted to RGB for PIL / Matplotlib
+bgr_array = memory_face.image  # NumPy array in BGR format
+rgb_array = memory_face.rgb_image  # NumPy array converted to RGB for PIL / Matplotlib
 ```
 
 ### Webcam Capture Callback
@@ -275,9 +275,11 @@ Receive captured faces programmatically whenever the user presses <kbd>C</kbd>:
 ```python
 import detekface
 
+
 def handle_capture(face: detekface.FaceCapture) -> None:
     print(f"Captured face: {face.width}x{face.height}px, score={face.confidence:.2%}")
     print(f"Saved file: {face.path}")
+
 
 detekface.camera(on_capture=handle_capture)
 ```
@@ -325,7 +327,7 @@ import detekface
 saved_path = detekface.video(
     path="input_clip.mp4",
     output_path="annotated_clip.mp4",
-    show=True,             # Set show=False for headless server processing
+    show=True,  # Set show=False for headless server processing
     shape="hud",
     color="#00FF88",
     show_confidence=True,

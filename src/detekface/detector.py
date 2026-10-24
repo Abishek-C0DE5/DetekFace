@@ -9,7 +9,6 @@ from detekface.exceptions import (
     ConfigurationError,
     ImageNotFoundError,
     InvalidImageError,
-    ModelCompatibilityError,
 )
 from detekface.models import resolve_model
 from detekface.types import (
@@ -35,7 +34,9 @@ def _validate_threshold(name: str, value: float, min_val: float = 0.0, max_val: 
         )
 
 
-def _validate_input_size(input_size: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+def _validate_input_size(
+    input_size: Optional[Tuple[int, int]],
+) -> Optional[Tuple[int, int]]:
     """Validate optional input_size tuple (width, height)."""
     if input_size is None:
         return None
@@ -89,7 +90,7 @@ def _load_and_validate_image(image_input: Union[str, Path, np.ndarray]) -> np.nd
                         message="Image array contains NaN or infinite values.",
                         hint="Clean or impute non-finite values before passing to detector.",
                     )
-                if img.max() <= 1.0:
+                if np.max(img) <= 1.0:
                     img = (img * 255.0).clip(0, 255).astype(np.uint8)
                 else:
                     img = img.clip(0, 255).astype(np.uint8)
@@ -376,4 +377,3 @@ class FaceDetector:
             recursive=recursive,
             keep_images=keep_images,
         )
-

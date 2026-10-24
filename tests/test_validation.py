@@ -2,8 +2,6 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-import numpy as np
 import pytest
 
 from detekface.types import BoundingBox, FaceDetection
@@ -18,6 +16,7 @@ from validation.evaluate import (
 # =========================================================================
 # 1. IoU Calculation Tests
 # =========================================================================
+
 
 def test_compute_iou_identical_boxes():
     """Identical bounding boxes must yield IoU = 1.0."""
@@ -61,6 +60,7 @@ def test_compute_iou_boundingbox_object_support():
 # =========================================================================
 # 2. Greedy Matching Logic Tests
 # =========================================================================
+
 
 def test_match_detections_perfect_match():
     """All predictions match ground truth boxes with high IoU."""
@@ -120,6 +120,7 @@ def test_match_detections_duplicate_rejection():
 # 3. Metric Calculation Tests
 # =========================================================================
 
+
 def test_calculate_metrics_edge_cases():
     """Test boundary conditions for calculate_metrics."""
     # Zero detections, zero GT (e.g. Clean no-face image)
@@ -140,6 +141,7 @@ def test_calculate_metrics_edge_cases():
 # =========================================================================
 # 4. Manifest Integrity Tests
 # =========================================================================
+
 
 def test_manifest_schema_and_boundaries():
     """Verify that all manifest entries conform to schema and bounding boxes are inside image bounds."""
@@ -194,6 +196,7 @@ def test_manifest_schema_and_boundaries():
 # =========================================================================
 # 5. End-to-End Validation Run Test
 # =========================================================================
+
 
 def test_evaluate_backend_yunet_smoke():
     """Verify evaluate_backend runs successfully against validation manifest."""

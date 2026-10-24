@@ -54,8 +54,7 @@ def detect(
     top_k: int = 5000,
     model: Optional[Union[str, Path]] = None,
     cache_dir: Optional[Union[str, Path]] = None,
-) -> DetectionResult:
-    ...
+) -> DetectionResult: ...
 ```
 
 ### Parameters

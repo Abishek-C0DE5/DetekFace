@@ -4,7 +4,6 @@ All tests are designed to run fully offline without external network dependencie
 """
 
 import hashlib
-import io
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 import urllib.error
@@ -108,14 +107,17 @@ def test_cache_reuse_without_download(tmp_path: Path) -> None:
     dummy_sha256 = compute_file_sha256(cached_file)
 
     # Patch metadata sha256 to match our dummy cached file
-    with patch.dict(OFFICIAL_MODELS, {
-        "yunet_2026may": MagicMock(
-            name=metadata.name,
-            filename=metadata.filename,
-            sha256=dummy_sha256,
-            urls=metadata.urls,
-        )
-    }):
+    with patch.dict(
+        OFFICIAL_MODELS,
+        {
+            "yunet_2026may": MagicMock(
+                name=metadata.name,
+                filename=metadata.filename,
+                sha256=dummy_sha256,
+                urls=metadata.urls,
+            )
+        },
+    ):
         with patch("urllib.request.urlopen") as mock_urlopen:
             result = resolve_model("yunet_2026may", cache_dir=tmp_path)
             assert result == cached_file
@@ -198,7 +200,10 @@ def test_mock_download_network_failure(tmp_path: Path) -> None:
         urls=("https://url1.com/m.onnx", "https://url2.com/m.onnx"),
     )
 
-    with patch("urllib.request.urlopen", side_effect=urllib.error.URLError("Network unreachable")):
+    with patch(
+        "urllib.request.urlopen",
+        side_effect=urllib.error.URLError("Network unreachable"),
+    ):
         with pytest.raises(ModelDownloadError) as exc_info:
             download_model(mock_meta, target_file)
 
@@ -239,3 +244,16 @@ def test_get_cache_dir_custom_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     cache_dir = get_cache_dir()
     assert cache_dir == custom_dir
     assert custom_dir.is_dir()
+
+
+@pytest.mark.network
+def test_live_model_download_and_verify(tmp_path: Path) -> None:
+    """Live network test: download official YuNet ONNX model from official URLs and verify integrity.
+
+    Kept separate from offline unit tests via the 'network' pytest marker.
+    """
+    meta = OFFICIAL_MODELS["yunet_2023mar"]
+    target_path = tmp_path / meta.filename
+    downloaded = download_model(meta, target_path)
+    assert downloaded.is_file()
+    assert compute_file_sha256(downloaded) == meta.sha256

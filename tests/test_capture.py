@@ -2,13 +2,11 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import cv2
 import numpy as np
 import pytest
 
 from detekface import (
     BoundingBox,
-    CaptureError,
     CaptureSaveError,
     DetectionResult,
     FaceCapture,
@@ -59,8 +57,8 @@ def test_capture_chooses_largest_face_by_default(tmp_path: Path) -> None:
     """Verify that capture automatically selects the face with the largest area when multiple exist."""
     img = np.zeros((300, 300, 3), dtype=np.uint8)
     small_face = _create_dummy_detection(x=10, y=10, width=20, height=20, confidence=0.99)  # area = 400
-    med_face = _create_dummy_detection(x=50, y=50, width=40, height=40, confidence=0.85)    # area = 1600
-    large_face = _create_dummy_detection(x=100, y=100, width=80, height=80, confidence=0.75) # area = 6400
+    med_face = _create_dummy_detection(x=50, y=50, width=40, height=40, confidence=0.85)  # area = 1600
+    large_face = _create_dummy_detection(x=100, y=100, width=80, height=80, confidence=0.75)  # area = 6400
 
     result = DetectionResult(faces=[small_face, large_face, med_face], image=img)
 
@@ -232,6 +230,7 @@ def test_camera_keyboard_capture_no_face_graceful_handling(tmp_path: Path) -> No
     assert list(tmp_path.glob("*.jpg")) == []
 
 
+@pytest.mark.network
 def test_real_model_detection_and_capture_integration(tmp_path: Path) -> None:
     """Integration test: Real model detection followed by programmatic capture on sample asset."""
     sample_img_path = Path(__file__).parent / "assets" / "sample_face.jpg"

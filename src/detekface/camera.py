@@ -77,7 +77,10 @@ class CameraSession:
                     message=f"Invalid camera resolution: {resolution}. Expected (width, height) >= 32.",
                     hint="Set resolution to a standard size like (1280, 720) or (640, 480), or None.",
                 )
-            self.resolution: Optional[Tuple[int, int]] = (int(resolution[0]), int(resolution[1]))
+            self.resolution: Optional[Tuple[int, int]] = (
+                int(resolution[0]),
+                int(resolution[1]),
+            )
         else:
             self.resolution = None
 
@@ -533,6 +536,7 @@ def camera(
 
         while True:
             result = session.read()
+            assert session.latest_frame is not None
             display_frame = session.latest_frame.copy()
 
             # Draw customizable overlays on the display frame

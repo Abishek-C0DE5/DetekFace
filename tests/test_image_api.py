@@ -5,7 +5,7 @@ verifies original image immutability, format validation, crop purity, and reopen
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import cv2
 import numpy as np
 import pytest
@@ -16,7 +16,6 @@ from detekface.exceptions import (
     DetekFaceError,
     ImageSaveError,
     InvalidImageError,
-    NoFaceDetectedError,
 )
 from detekface.types import (
     BoundingBox,
@@ -74,6 +73,7 @@ def zero_face_result(synthetic_face_image) -> DetectionResult:
 # -------------------------------------------------------------------------
 # Check 1 & Check 3: Properties, Distinguishability, Immutability
 # -------------------------------------------------------------------------
+
 
 def test_result_count_and_faces_properties(zero_face_result, single_face_result, multi_face_result):
     """Test result.count accurately reflects faces and result.faces exposes them."""
@@ -152,6 +152,7 @@ def test_annotate_zero_faces_returns_unmodified_copy(zero_face_result):
 # Check 2: Save and Reopen Saved Files
 # -------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize("extension", [".jpg", ".png", ".bmp", ".webp"])
 def test_save_and_reopen_various_formats(single_face_result, tmp_path, extension):
     """Test saving annotated image in various formats, reopening, and verifying dimensions."""
@@ -195,6 +196,7 @@ def test_save_creates_nested_parent_directories(single_face_result, tmp_path):
 # -------------------------------------------------------------------------
 # Check 4: Invalid Output Paths and Formats
 # -------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "bad_path",
@@ -253,10 +255,11 @@ def test_save_opencv_failure_raises_image_save_error(single_face_result, tmp_pat
 # Crop Purity Requirement: Crops from Original Image, Not Drawn Boxes
 # -------------------------------------------------------------------------
 
+
 def test_captured_crops_come_from_original_image_not_annotated(single_face_result, tmp_path):
     """Verify that face crops are extracted strictly from the unannotated original image."""
     # First, render multiple overlays and save annotated image
-    annotated = single_face_result.annotate(shape="hud", color="#00FF88", thickness=5)
+    _ = single_face_result.annotate(shape="hud", color="#00FF88", thickness=5)
     single_face_result.save(tmp_path / "annotated.jpg", shape="hud", color="#00FF88", thickness=5)
 
     # Perform capture via detekface.capture()
@@ -295,12 +298,13 @@ def test_detection_result_capture_method_features(multi_face_result, tmp_path):
 # Window GUI show() Method Tests
 # -------------------------------------------------------------------------
 
+
 def test_show_window_keypress_closure(single_face_result):
     """Test result.show() displays window and returns keycode on user keypress."""
     with (
         patch("cv2.namedWindow") as mock_named_win,
         patch("cv2.imshow") as mock_imshow,
-        patch("cv2.waitKey", return_value=ord("q")) as mock_wait_key,
+        patch("cv2.waitKey", return_value=ord("q")),
         patch("cv2.destroyWindow") as mock_destroy,
     ):
         key = single_face_result.show(title="My Face Window", shape="corners", color="cyan")
@@ -354,6 +358,8 @@ def test_show_window_gui_error_raises_detekface_error(single_face_result):
 # Integration: Real Model Image Detection, Save, and Reopen
 # -------------------------------------------------------------------------
 
+
+@pytest.mark.network
 def test_real_model_detection_save_and_reopen_cycle(tmp_path):
     """Integration check: detect face on sample asset, annotate, save, and reopen."""
     asset_path = Path(__file__).parent / "assets" / "sample_face.jpg"

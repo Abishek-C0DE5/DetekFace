@@ -1,7 +1,6 @@
 """Example: Detecting faces in a prerecorded video file with detekface."""
 
 import argparse
-from pathlib import Path
 import sys
 
 import detekface

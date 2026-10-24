@@ -1,13 +1,12 @@
 """Tests for live webcam loop, frame processing, box drawing, and resource cleanup."""
 
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 import cv2
 import numpy as np
 import pytest
 
 from detekface import (
     BoundingBox,
-    CameraError,
     CameraNotFoundError,
     CameraReadError,
     DetectionResult,
@@ -173,6 +172,7 @@ def test_mirror_option_flips_frame(mock_cv2_camera) -> None:
 # =========================================================================
 # Hardware check (runs only if physical camera 0 is detected)
 # =========================================================================
+
 
 def test_real_hardware_webcam_execution_if_available() -> None:
     """Run real camera hardware check if camera device 0 is accessible.

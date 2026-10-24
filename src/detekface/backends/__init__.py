@@ -4,7 +4,7 @@ Provides unified backend selection for 'yunet' (default) and 'mediapipe' (option
 """
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Type, Union
+from typing import Optional, Tuple, Union
 
 from detekface.backends.base import BaseFaceBackend
 from detekface.backends.yunet import YuNetBackend

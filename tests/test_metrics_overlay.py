@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import cv2
 import numpy as np
 import pytest
 
@@ -10,7 +9,6 @@ from detekface import (
     BoundingBox,
     ConfigurationError,
     DetectionResult,
-    FaceCapture,
     FaceDetection,
     FPSCounter,
     camera,
@@ -24,7 +22,13 @@ from detekface import (
 )
 
 
-def _create_sample_face(x: int = 25, y: int = 35, width: int = 40, height: int = 50, confidence: float = 0.945) -> FaceDetection:
+def _create_sample_face(
+    x: int = 25,
+    y: int = 35,
+    width: int = 40,
+    height: int = 50,
+    confidence: float = 0.945,
+) -> FaceDetection:
     """Helper to create a sample FaceDetection."""
     bbox = BoundingBox(x=x, y=y, width=width, height=height)
     return FaceDetection(bbox=bbox, confidence=confidence)
@@ -142,7 +146,7 @@ def test_camera_information_overlays_integration(tmp_path: Path) -> None:
 
     with (
         patch("cv2.VideoCapture") as mock_cap_cls,
-        patch("cv2.imshow") as mock_imshow,
+        patch("cv2.imshow"),
         patch("cv2.waitKey", return_value=ord("q")),
         patch("cv2.destroyAllWindows"),
         patch("detekface.camera.draw_metrics_overlay") as mock_metrics_draw,

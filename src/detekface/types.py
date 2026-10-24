@@ -643,7 +643,4 @@ class FaceCapture:
 
     def __repr__(self) -> str:
         saved_info = f", saved to '{self.path}'" if self.path else ""
-        return (
-            f"<FaceCapture: {self.width}x{self.height}px, "
-            f"confidence={self.confidence:.2f}{saved_info}>"
-        )
+        return f"<FaceCapture: {self.width}x{self.height}px, confidence={self.confidence:.2f}{saved_info}>"

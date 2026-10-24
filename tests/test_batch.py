@@ -9,7 +9,6 @@ import pytest
 import detekface
 from detekface import (
     BatchDetectionResult,
-    BatchItemResult,
     BoundingBox,
     DetectionResult,
     FaceDetection,
@@ -204,6 +203,7 @@ def test_progress_callback_arities():
 
     # 3-arg callback: (item, current, total)
     cb_3_args = []
+
     def callback_3(item, cur, tot):
         cb_3_args.append((item.source, cur, tot))
 
@@ -212,6 +212,7 @@ def test_progress_callback_arities():
 
     # 2-arg callback: (current, total)
     cb_2_args = []
+
     def callback_2(cur, tot):
         cb_2_args.append((cur, tot))
 
@@ -220,6 +221,7 @@ def test_progress_callback_arities():
 
     # 1-arg callback: (item)
     cb_1_arg = []
+
     def callback_1(item):
         cb_1_arg.append(item.source)
 
@@ -296,4 +298,3 @@ def test_real_model_batch_detection_mediapipe():
         assert results.total_faces >= 1
     except detekface.DependencyNotFoundError:
         pytest.skip("MediaPipe not installed.")
-

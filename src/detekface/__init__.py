@@ -5,7 +5,7 @@ clean dataclass outputs, and robust error handling.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from detekface.batch import BatchDetectionResult, BatchItemResult

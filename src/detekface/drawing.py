@@ -10,7 +10,7 @@ from typing import Deque, Dict, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
-from detekface.exceptions import ConfigurationError, InvalidSettingError
+from detekface.exceptions import InvalidSettingError
 from detekface.types import FaceDetection
 
 # Documented named color mapping (RGB values)
@@ -235,12 +235,28 @@ def draw_metrics_overlay(
     )
 
 
-def _draw_rectangle(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr: Tuple[int, int, int], thickness: int) -> None:
+def _draw_rectangle(
+    img: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    color_bgr: Tuple[int, int, int],
+    thickness: int,
+) -> None:
     """Draw a classic rectangle box."""
     cv2.rectangle(img, (x1, y1), (x2, y2), color_bgr, thickness)
 
 
-def _draw_corners(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr: Tuple[int, int, int], thickness: int) -> None:
+def _draw_corners(
+    img: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    color_bgr: Tuple[int, int, int],
+    thickness: int,
+) -> None:
     """Draw tactical corner brackets on the four corners of the bounding box."""
     w = x2 - x1
     h = y2 - y1
@@ -263,7 +279,15 @@ def _draw_corners(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr
     cv2.line(img, (x2, y2), (x2, y2 - c_len), color_bgr, thickness)
 
 
-def _draw_circle(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr: Tuple[int, int, int], thickness: int) -> None:
+def _draw_circle(
+    img: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    color_bgr: Tuple[int, int, int],
+    thickness: int,
+) -> None:
     """Draw a geometric circle overlay encompassing the detected face.
 
     Note: This is a geometric overlay indicator around the face, not a facial contour.
@@ -276,7 +300,15 @@ def _draw_circle(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr:
     cv2.circle(img, (cx, cy), radius, color_bgr, thickness)
 
 
-def _draw_rounded(img: np.ndarray, x1: int, y1: int, x2: int, y2: int, color_bgr: Tuple[int, int, int], thickness: int) -> None:
+def _draw_rounded(
+    img: np.ndarray,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+    color_bgr: Tuple[int, int, int],
+    thickness: int,
+) -> None:
     """Draw a rounded rectangle with smooth circular corners."""
     w = x2 - x1
     h = y2 - y1
@@ -326,7 +358,14 @@ def _draw_hud(
     # Badge rendering when confidence is enabled
     if show_confidence:
         score_text = f"TARGET {format_confidence(face.confidence)}"
-        draw_text_badge(img, score_text, (x1, max(16, y1 - 6)), text_color=color_bgr, font_scale=0.42, padding=3)
+        draw_text_badge(
+            img,
+            score_text,
+            (x1, max(16, y1 - 6)),
+            text_color=color_bgr,
+            font_scale=0.42,
+            padding=3,
+        )
 
 
 def draw_face_overlay(
@@ -378,13 +417,30 @@ def draw_face_overlay(
     elif valid_shape == "rounded":
         _draw_rounded(out, x1, y1, x2, y2, bgr_color, valid_thickness)
     elif valid_shape == "hud":
-        _draw_hud(out, x1, y1, x2, y2, face, bgr_color, valid_thickness, show_confidence=show_confidence)
+        _draw_hud(
+            out,
+            x1,
+            y1,
+            x2,
+            y2,
+            face,
+            bgr_color,
+            valid_thickness,
+            show_confidence=show_confidence,
+        )
 
     # Render confidence label for non-HUD shapes if requested
     if show_confidence and valid_shape != "hud":
         conf_text = format_confidence(face.confidence)
         label_y = max(18, y1 - 6)
-        draw_text_badge(out, conf_text, (x1, label_y), text_color=bgr_color, font_scale=0.42, padding=3)
+        draw_text_badge(
+            out,
+            conf_text,
+            (x1, label_y),
+            text_color=bgr_color,
+            font_scale=0.42,
+            padding=3,
+        )
 
     return out
 

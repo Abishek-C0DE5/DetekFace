@@ -19,7 +19,6 @@ enhances underlying neural network weights.
 import argparse
 from dataclasses import asdict, dataclass
 import json
-import os
 from pathlib import Path
 import platform
 import statistics
@@ -27,7 +26,6 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import cv2
-import numpy as np
 
 import detekface
 from detekface.types import BoundingBox, FaceDetection
@@ -88,6 +86,7 @@ def compute_iou(
 @dataclass
 class MatchResult:
     """Matching evaluation result for a single image."""
+
     image_id: str
     ground_truth_count: int
     detection_count: int
@@ -372,14 +371,48 @@ def print_evaluation_report(results: Dict[str, Any]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run DetekFace validation suite.")
-    parser.add_argument("--backend", choices=["yunet", "mediapipe"], default="yunet", help="Detection backend to evaluate")
-    parser.add_argument("--confidence-threshold", type=float, default=0.70, help="Confidence threshold (0.0 to 1.0)")
-    parser.add_argument("--iou-threshold", type=float, default=0.50, help="IoU threshold for True Positive (default 0.50)")
-    parser.add_argument("--input-size", type=str, default=None, help="Optional inference resolution (e.g. 640x480)")
+    parser.add_argument(
+        "--backend",
+        choices=["yunet", "mediapipe"],
+        default="yunet",
+        help="Detection backend to evaluate",
+    )
+    parser.add_argument(
+        "--confidence-threshold",
+        type=float,
+        default=0.70,
+        help="Confidence threshold (0.0 to 1.0)",
+    )
+    parser.add_argument(
+        "--iou-threshold",
+        type=float,
+        default=0.50,
+        help="IoU threshold for True Positive (default 0.50)",
+    )
+    parser.add_argument(
+        "--input-size",
+        type=str,
+        default=None,
+        help="Optional inference resolution (e.g. 640x480)",
+    )
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST, help="Path to manifest.json")
-    parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR, help="Path to images directory")
-    parser.add_argument("--compare", action="store_true", help="Run both YuNet and MediaPipe backends side-by-side")
-    parser.add_argument("--json", type=Path, default=None, help="Optional output JSON path for structured results")
+    parser.add_argument(
+        "--data-dir",
+        type=Path,
+        default=DEFAULT_DATA_DIR,
+        help="Path to images directory",
+    )
+    parser.add_argument(
+        "--compare",
+        action="store_true",
+        help="Run both YuNet and MediaPipe backends side-by-side",
+    )
+    parser.add_argument(
+        "--json",
+        type=Path,
+        default=None,
+        help="Optional output JSON path for structured results",
+    )
     args = parser.parse_args()
 
     input_size_tuple = None
@@ -388,7 +421,10 @@ def main() -> int:
         if len(parts) == 2 and all(p.isdigit() for p in parts):
             input_size_tuple = (int(parts[0]), int(parts[1]))
         else:
-            print(f"Error: Invalid --input-size format '{args.input_size}'. Use format like '640x480'.", file=sys.stderr)
+            print(
+                f"Error: Invalid --input-size format '{args.input_size}'. Use format like '640x480'.",
+                file=sys.stderr,
+            )
             return 1
 
     backends_to_run = ["yunet", "mediapipe"] if args.compare else [args.backend]

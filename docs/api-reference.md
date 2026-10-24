@@ -57,8 +57,7 @@ def camera(
     detector: Optional[FaceDetector] = None,
     window_name: str = "DetekFace - Live Webcam",
     backend: str = "yunet",
-) -> None:
-    ...
+) -> None: ...
 ```
 
 Opens a live webcam feed, runs real-time face detection on each frame, draws customizable overlays, and handles interactive keyboard commands.
@@ -102,8 +101,7 @@ def open_camera(
     backend: str = "yunet",
     window_title: Optional[str] = None,
     auto_open: bool = True,
-) -> CameraSession:
-    ...
+) -> CameraSession: ...
 ```
 
 Opens and returns a managed `CameraSession` context manager for headless processing, frame iteration, custom pipelines, and programmatic face capture.
@@ -135,8 +133,7 @@ def detect(
     model: Optional[Union[str, Path]] = None,
     cache_dir: Optional[Union[str, Path]] = None,
     backend: str = "yunet",
-) -> DetectionResult:
-    ...
+) -> DetectionResult: ...
 ```
 
 Detects human faces in a still image or raw NumPy BGR array.
@@ -176,8 +173,7 @@ def detect_many(
     progress_callback: Optional[Callable] = None,
     recursive: bool = False,
     keep_images: bool = True,
-) -> BatchDetectionResult:
-    ...
+) -> BatchDetectionResult: ...
 ```
 
 Performs face detection across multiple images, file paths, or directories.
@@ -195,11 +191,13 @@ Performs face detection across multiple images, file paths, or directories.
 import detekface
 
 # Process a list of images (collects errors by default)
-results = detekface.detect_many([
-    "photos/alice.jpg",
-    "photos/bob.png",
-    "photos/missing.jpg",
-])
+results = detekface.detect_many(
+    [
+        "photos/alice.jpg",
+        "photos/bob.png",
+        "photos/missing.jpg",
+    ]
+)
 
 for item in results:
     if item.is_success:
@@ -222,8 +220,7 @@ def capture(
     save_dir: Optional[Union[str, Path]] = None,
     filename: Optional[str] = None,
     save: bool = True,
-) -> FaceCapture:
-    ...
+) -> FaceCapture: ...
 ```
 
 Crops a detected face from a `DetectionResult` using the original, unannotated image frame.
@@ -264,8 +261,7 @@ def video(
     detector: Optional[FaceDetector] = None,
     window_name: str = "DetekFace - Video File",
     backend: str = "yunet",
-) -> int:
-    ...
+) -> int: ...
 ```
 
 Processes a prerecorded video file frame-by-frame, rendering detection overlays and optionally exporting an annotated video.
@@ -333,10 +329,36 @@ class CameraSession:
     def read(self) -> DetectionResult: ...
     def read_raw(self) -> np.ndarray: ...
     def stream(self, max_frames: Optional[int] = None) -> Iterator[DetectionResult]: ...
-    def process(self, callback: Callable[[DetectionResult], Optional[bool]], max_frames: Optional[int] = None) -> int: ...
-    def capture(self, face_index: Optional[int] = None, save_dir: Optional[Union[str, Path]] = "captures", filename: Optional[str] = None, save: bool = True) -> FaceCapture: ...
-    def render(self, shape: str = "rectangle", color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 3, show_confidence: bool = False, show_fps: bool = False, show_count: bool = False) -> np.ndarray: ...
-    def show(self, shape: str = "rectangle", color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 3, show_confidence: bool = False, show_fps: bool = False, show_count: bool = False, window_title: Optional[str] = None, wait_ms: int = 1) -> int: ...
+    def process(
+        self, callback: Callable[[DetectionResult], Optional[bool]], max_frames: Optional[int] = None
+    ) -> int: ...
+    def capture(
+        self,
+        face_index: Optional[int] = None,
+        save_dir: Optional[Union[str, Path]] = "captures",
+        filename: Optional[str] = None,
+        save: bool = True,
+    ) -> FaceCapture: ...
+    def render(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Sequence[int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+        show_fps: bool = False,
+        show_count: bool = False,
+    ) -> np.ndarray: ...
+    def show(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Sequence[int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+        show_fps: bool = False,
+        show_count: bool = False,
+        window_title: Optional[str] = None,
+        wait_ms: int = 1,
+    ) -> int: ...
 ```
 
 #### Frame Ownership & Memory Semantics
@@ -392,21 +414,42 @@ class DetectionResult:
     @property
     def rgb_image(self) -> np.ndarray: ...
 
-    def show(self, title: str = "DetekFace Detection", shape: str = "rectangle",
-             color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 2,
-             show_confidence: bool = False, show_count: bool = False) -> None: ...
+    def show(
+        self,
+        title: str = "DetekFace Detection",
+        shape: str = "rectangle",
+        color: Union[str, Sequence[int]] = "#00FF88",
+        thickness: int = 2,
+        show_confidence: bool = False,
+        show_count: bool = False,
+    ) -> None: ...
 
-    def save(self, path: Union[str, Path], shape: str = "rectangle",
-             color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 2,
-             show_confidence: bool = False, show_count: bool = False) -> Path: ...
+    def save(
+        self,
+        path: Union[str, Path],
+        shape: str = "rectangle",
+        color: Union[str, Sequence[int]] = "#00FF88",
+        thickness: int = 2,
+        show_confidence: bool = False,
+        show_count: bool = False,
+    ) -> Path: ...
 
-    def render(self, shape: str = "rectangle", color: Union[str, Sequence[int]] = "#00FF88",
-               thickness: int = 2, show_confidence: bool = False,
-               show_count: bool = False) -> np.ndarray: ...
+    def render(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Sequence[int]] = "#00FF88",
+        thickness: int = 2,
+        show_confidence: bool = False,
+        show_count: bool = False,
+    ) -> np.ndarray: ...
 
-    def capture(self, face_index: Optional[int] = None,
-                save_dir: Optional[Union[str, Path]] = None,
-                filename: Optional[str] = None, save: bool = True) -> FaceCapture: ...
+    def capture(
+        self,
+        face_index: Optional[int] = None,
+        save_dir: Optional[Union[str, Path]] = None,
+        filename: Optional[str] = None,
+        save: bool = True,
+    ) -> FaceCapture: ...
 ```
 
 ---
@@ -524,11 +567,11 @@ class FaceLandmarks:
     left_eye: Point
     right_eye: Point
     nose_tip: Point
-    mouth_left: Optional[Point] = None      # Provided by YuNet; None for MediaPipe
-    mouth_right: Optional[Point] = None     # Provided by YuNet; None for MediaPipe
-    mouth_center: Optional[Point] = None    # Provided by MediaPipe; None for YuNet
-    right_ear: Optional[Point] = None       # Provided by MediaPipe; None for YuNet
-    left_ear: Optional[Point] = None        # Provided by MediaPipe; None for YuNet
+    mouth_left: Optional[Point] = None  # Provided by YuNet; None for MediaPipe
+    mouth_right: Optional[Point] = None  # Provided by YuNet; None for MediaPipe
+    mouth_center: Optional[Point] = None  # Provided by MediaPipe; None for YuNet
+    right_ear: Optional[Point] = None  # Provided by MediaPipe; None for YuNet
+    left_ear: Optional[Point] = None  # Provided by MediaPipe; None for YuNet
 
     def as_list(self) -> List[Point]: ...
     def as_tuples(self) -> List[Tuple[float, float]]: ...

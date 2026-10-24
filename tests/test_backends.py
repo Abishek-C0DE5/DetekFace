@@ -19,31 +19,26 @@ import cv2
 import numpy as np
 import pytest
 
-import detekface
 from detekface import (
     DEFAULT_BACKEND,
     SUPPORTED_BACKENDS,
     BoundingBox,
-    ConfigurationError,
     DependencyNotFoundError,
     DetectionResult,
     FaceCapture,
-    FaceDetection,
     FaceDetector,
-    FaceLandmarks,
     InvalidSettingError,
     Point,
     camera,
     detect,
     video,
 )
-from detekface.backends import get_backend
-from detekface.backends.base import BaseFaceBackend
 
 
 # =========================================================================
 # 1. Backend Selection & Defaults
 # =========================================================================
+
 
 def test_default_backend_is_yunet():
     """Verify that default backend across all public entrypoints is 'yunet'."""
@@ -80,6 +75,7 @@ def test_invalid_backend_names_raise_invalid_setting_error():
 # 2. Optional Dependency Handling & No Silent Fallback
 # =========================================================================
 
+
 def test_missing_optional_dependency_raises_actionable_error():
     """Verify that requesting 'mediapipe' when uninstalled raises DependencyNotFoundError with pip hint."""
     real_import = builtins.__import__
@@ -103,7 +99,10 @@ def test_missing_optional_dependency_raises_actionable_error():
 
 def test_no_silent_fallback_on_backend_failure():
     """Verify that if mediapipe backend fails to initialize, it does NOT silently switch to yunet."""
-    with patch("detekface.backends.mediapipe.MediaPipeBackend.__init__", side_effect=RuntimeError("Init crash")):
+    with patch(
+        "detekface.backends.mediapipe.MediaPipeBackend.__init__",
+        side_effect=RuntimeError("Init crash"),
+    ):
         with pytest.raises(RuntimeError) as exc_info:
             FaceDetector(backend="mediapipe")
         assert "Init crash" in str(exc_info.value)
@@ -113,10 +112,14 @@ def test_no_silent_fallback_on_backend_failure():
 # 3. Output Normalization & Landmark Contracts
 # =========================================================================
 
+
 def test_yunet_landmark_contract():
     """Verify YuNet supplies 5 landmarks and sets MediaPipe-specific landmarks to None."""
     img = np.zeros((100, 100, 3), dtype=np.uint8)
-    dummy_row = np.array([[10, 10, 40, 50, 15, 20, 35, 20, 25, 30, 20, 40, 30, 40, 0.95]], dtype=np.float32)
+    dummy_row = np.array(
+        [[10, 10, 40, 50, 15, 20, 35, 20, 25, 30, 20, 40, 30, 40, 0.95]],
+        dtype=np.float32,
+    )
 
     with (
         patch("detekface.detector.resolve_model", return_value=Path("mock.onnx")),
@@ -172,7 +175,10 @@ def test_mediapipe_output_normalization_mocked():
 
     with (
         patch("mediapipe.tasks.python.vision.FaceDetector.create_from_options") as mock_create,
-        patch("detekface.backends.mediapipe.resolve_mediapipe_model", return_value=Path("mock.tflite")),
+        patch(
+            "detekface.backends.mediapipe.resolve_mediapipe_model",
+            return_value=Path("mock.tflite"),
+        ),
     ):
         mock_task_detector = MagicMock()
         mock_task_detector.detect.return_value = mock_mp_result
@@ -209,6 +215,7 @@ def test_mediapipe_output_normalization_mocked():
 # =========================================================================
 # 4. Camera and Video Backend Integration
 # =========================================================================
+
 
 def test_camera_backend_parameter_selection():
     """Verify detekface.camera() instantiates FaceDetector with the selected backend."""
@@ -256,6 +263,8 @@ def test_video_backend_parameter_selection(tmp_path: Path):
 # 5. Real Model Integration Test with MediaPipe (if installed)
 # =========================================================================
 
+
+@pytest.mark.optional_backend
 def test_real_mediapipe_detection_on_sample_asset():
     """Integration check: Run real MediaPipe backend on sample_face.jpg."""
     try:

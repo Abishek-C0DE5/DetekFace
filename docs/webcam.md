@@ -284,11 +284,13 @@ To receive the captured face object programmatically when the user presses <kbd>
 ```python
 import detekface
 
+
 def on_face_captured(face: detekface.FaceCapture) -> None:
     print(f"\n[EVENT] Face captured!")
     print(f"  Dimensions : {face.width}x{face.height} pixels")
     print(f"  Confidence : {face.confidence:.2%}")
     print(f"  File saved : {face.path}")
+
 
 detekface.camera(
     shape="hud",
@@ -317,8 +319,7 @@ def camera(
     on_capture: Optional[Callable[[FaceCapture], None]] = None,
     window_title: str = "detekface - Live Face Detection",
     max_frames: Optional[int] = None,
-) -> None:
-    ...
+) -> None: ...
 ```
 
 | Parameter | Type | Default | Description |

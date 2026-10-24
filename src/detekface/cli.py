@@ -28,7 +28,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "-v", "--version",
+        "-v",
+        "--version",
         action="version",
         version=f"%(prog)s {__version__}",
         help="Show program version number and exit.",
@@ -50,7 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="Stream real-time webcam feed with customizable face detection overlays.",
     )
     p_cam.add_argument(
-        "--device", "-d",
+        "--device",
+        "-d",
         type=int,
         default=0,
         help="Camera device index (default: 0).",
@@ -62,13 +64,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Detection backend (default: yunet).",
     )
     p_cam.add_argument(
-        "--confidence", "-c",
+        "--confidence",
+        "-c",
         type=float,
         default=0.7,
         help="Minimum confidence threshold between 0.0 and 1.0 (default: 0.7).",
     )
     p_cam.add_argument(
-        "--shape", "-s",
+        "--shape",
+        "-s",
         choices=sorted(SUPPORTED_SHAPES),
         default="rectangle",
         help="Overlay shape style (default: rectangle).",
@@ -79,7 +83,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overlay color as hex code (#00FF88) or color name (default: #00FF88).",
     )
     p_cam.add_argument(
-        "--thickness", "-t",
+        "--thickness",
+        "-t",
         type=int,
         default=3,
         help="Overlay border thickness in pixels (default: 3).",
@@ -135,7 +140,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to the input image file.",
     )
     p_img.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default=None,
         help="Path to save the annotated output image.",
     )
@@ -156,13 +162,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Detection backend (default: yunet).",
     )
     p_img.add_argument(
-        "--confidence", "-c",
+        "--confidence",
+        "-c",
         type=float,
         default=0.7,
         help="Minimum confidence threshold (default: 0.7).",
     )
     p_img.add_argument(
-        "--shape", "-s",
+        "--shape",
+        "-s",
         choices=sorted(SUPPORTED_SHAPES),
         default="rectangle",
         help="Overlay shape style for saved images (default: rectangle).",
@@ -173,7 +181,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overlay color as hex or named color (default: #00FF88).",
     )
     p_img.add_argument(
-        "--thickness", "-t",
+        "--thickness",
+        "-t",
         type=int,
         default=3,
         help="Overlay stroke thickness in pixels (default: 3).",
@@ -208,7 +217,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory or path containing images to process.",
     )
     p_batch.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default=None,
         help="Directory to save annotated images.",
     )
@@ -223,7 +233,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overwrite existing files in output directories.",
     )
     p_batch.add_argument(
-        "--recursive", "-r",
+        "--recursive",
+        "-r",
         action="store_true",
         help="Recursively discover images in subdirectories.",
     )
@@ -238,7 +249,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit with non-zero exit code if one or more batch items encountered errors.",
     )
     p_batch.add_argument(
-        "--quiet", "-q",
+        "--quiet",
+        "-q",
         action="store_true",
         help="Suppress per-image progress log.",
     )
@@ -249,13 +261,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Detection backend (default: yunet).",
     )
     p_batch.add_argument(
-        "--confidence", "-c",
+        "--confidence",
+        "-c",
         type=float,
         default=0.7,
         help="Minimum confidence threshold (default: 0.7).",
     )
     p_batch.add_argument(
-        "--shape", "-s",
+        "--shape",
+        "-s",
         choices=sorted(SUPPORTED_SHAPES),
         default="rectangle",
         help="Overlay shape style for saved images (default: rectangle).",
@@ -266,7 +280,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overlay color as hex or named color (default: #00FF88).",
     )
     p_batch.add_argument(
-        "--thickness", "-t",
+        "--thickness",
+        "-t",
         type=int,
         default=3,
         help="Overlay stroke thickness in pixels (default: 3).",
@@ -286,7 +301,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to input video file (.mp4, .avi, etc.).",
     )
     p_vid.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default=None,
         help="Path to save exported annotated video.",
     )
@@ -307,13 +323,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Detection backend (default: yunet).",
     )
     p_vid.add_argument(
-        "--confidence", "-c",
+        "--confidence",
+        "-c",
         type=float,
         default=0.7,
         help="Minimum confidence threshold (default: 0.7).",
     )
     p_vid.add_argument(
-        "--shape", "-s",
+        "--shape",
+        "-s",
         choices=sorted(SUPPORTED_SHAPES),
         default="rectangle",
         help="Overlay shape style (default: rectangle).",
@@ -324,7 +342,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Overlay color as hex or named color (default: #00FF88).",
     )
     p_vid.add_argument(
-        "--thickness", "-t",
+        "--thickness",
+        "-t",
         type=int,
         default=3,
         help="Overlay stroke thickness in pixels (default: 3).",
@@ -408,7 +427,9 @@ def _handle_image(args: argparse.Namespace) -> int:
         print(f"Detected {result.count} face(s) in '{input_path}' (backend: {args.backend}).")
         for idx, face in enumerate(result.faces, start=1):
             box = face.bbox
-            print(f"  Face #{idx}: Box(x={box.x}, y={box.y}, w={box.width}, h={box.height}), Conf={face.confidence:.1%}")
+            print(
+                f"  Face #{idx}: Box(x={box.x}, y={box.y}, w={box.width}, h={box.height}), Conf={face.confidence:.1%}"
+            )
 
         if args.output:
             saved_path = result.save(
@@ -483,10 +504,11 @@ def _handle_batch(args: argparse.Namespace) -> int:
         # Output annotations if output directory requested
         if out_dir:
             for item in results.successes:
-                src_p = Path(item.source)
+                src_p = Path(item.source if isinstance(item.source, (str, Path)) else "image.jpg")
                 dest = out_dir / f"annotated_{src_p.name}"
                 if dest.exists() and not args.overwrite:
                     continue
+                assert item.result is not None
                 item.result.save(
                     path=dest,
                     shape=args.shape,
@@ -498,10 +520,11 @@ def _handle_batch(args: argparse.Namespace) -> int:
         if crop_dir:
             for item in results.successes:
                 if item.has_faces:
-                    src_p = Path(item.source)
+                    src_p = Path(item.source if isinstance(item.source, (str, Path)) else "image.jpg")
                     crop_dest = crop_dir / f"crop_{src_p.stem}.jpg"
                     if crop_dest.exists() and not args.overwrite:
                         continue
+                    assert item.result is not None
                     item.result.capture(save_dir=crop_dir, filename=crop_dest.name, save=True)
 
         print("\nBatch Summary:")
@@ -578,10 +601,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         args = parser.parse_args(argv)
     except SystemExit as exc:
-        return exc.code
+        code = exc.code
+        return int(code) if isinstance(code, int) else (0 if code is None else 1)
 
     if hasattr(args, "func"):
-        return args.func(args)
+        res = args.func(args)
+        return int(res) if isinstance(res, int) else 0
 
     parser.print_help()
     return 0

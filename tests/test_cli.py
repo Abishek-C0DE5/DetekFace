@@ -1,15 +1,13 @@
 """Tests for detekface command-line interface (CLI)."""
 
-import io
 from pathlib import Path
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 import cv2
 import numpy as np
 import pytest
 
 from detekface import BoundingBox, DetectionResult, FaceDetection
-from detekface.cli import build_parser, main
+from detekface.cli import main
 
 
 @pytest.fixture
@@ -66,7 +64,18 @@ def test_cli_invalid_subcommand_exits_nonzero(capsys):
 def test_cli_camera_mocked():
     """Verify detekface camera invokes detekface.camera without physical webcam."""
     with patch("detekface.camera") as mock_cam:
-        code = main(["camera", "--device", "2", "--backend", "yunet", "--shape", "hud", "--show-fps"])
+        code = main(
+            [
+                "camera",
+                "--device",
+                "2",
+                "--backend",
+                "yunet",
+                "--shape",
+                "hud",
+                "--show-fps",
+            ]
+        )
         assert code == 0
         mock_cam.assert_called_once()
         _, kwargs = mock_cam.call_args
@@ -84,7 +93,16 @@ def test_cli_image_detection_and_output(sample_test_image: Path, tmp_path: Path,
     mock_res = DetectionResult(faces=[face], image=np.zeros((100, 100, 3), dtype=np.uint8))
 
     with patch("detekface.detect", return_value=mock_res):
-        code = main(["image", str(sample_test_image), "--output", str(out_file), "--shape", "rounded"])
+        code = main(
+            [
+                "image",
+                str(sample_test_image),
+                "--output",
+                str(out_file),
+                "--shape",
+                "rounded",
+            ]
+        )
         assert code == 0
         captured = capsys.readouterr()
         assert "Detected 1 face(s)" in captured.out
@@ -108,7 +126,15 @@ def test_cli_image_overwrite_protection(sample_test_image: Path, tmp_path: Path,
     face = FaceDetection(bbox=BoundingBox(10, 10, 20, 20), confidence=0.9)
     mock_res = DetectionResult(faces=[face], image=np.zeros((100, 100, 3), dtype=np.uint8))
     with patch("detekface.detect", return_value=mock_res):
-        code_overwrite = main(["image", str(sample_test_image), "--output", str(existing_out), "--overwrite"])
+        code_overwrite = main(
+            [
+                "image",
+                str(sample_test_image),
+                "--output",
+                str(existing_out),
+                "--overwrite",
+            ]
+        )
         assert code_overwrite == 0
 
 

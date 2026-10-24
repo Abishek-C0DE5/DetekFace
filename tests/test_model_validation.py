@@ -21,6 +21,8 @@ import pytest
 import detekface
 from detekface.exceptions import InvalidImageError
 
+pytestmark = pytest.mark.network
+
 
 @pytest.fixture
 def sample_image_path() -> Path:
@@ -40,6 +42,7 @@ def base_face_image(sample_image_path) -> np.ndarray:
 # -------------------------------------------------------------------------
 # 1. Blank Scene: Zero Faces & No False Detections
 # -------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "scene_type",
@@ -66,6 +69,7 @@ def test_blank_scene_produces_zero_detections(scene_type):
 # -------------------------------------------------------------------------
 # 2. Single Face: Confidence, Coordinates, and Landmarks
 # -------------------------------------------------------------------------
+
 
 def test_single_face_detection_and_landmarks(sample_image_path):
     """Verify single face detection accuracy and landmark sanity."""
@@ -100,6 +104,7 @@ def test_single_face_detection_and_landmarks(sample_image_path):
 # 3. Multiple Faces: Composited Multi-Subject Scenes
 # -------------------------------------------------------------------------
 
+
 def test_multiple_faces_composited_scene(base_face_image):
     """Verify detector identifies multiple distinct faces without spurious NMS suppression."""
     # Scale face down to 200x200
@@ -108,7 +113,7 @@ def test_multiple_faces_composited_scene(base_face_image):
 
     # Place two non-overlapping faces onto a 500x700 canvas
     canvas = np.full((500, 700, 3), 220, dtype=np.uint8)
-    canvas[50:250, 50:250] = face_resized    # Top-Left face
+    canvas[50:250, 50:250] = face_resized  # Top-Left face
     canvas[200:400, 400:600] = face_resized  # Bottom-Right face
 
     result = detekface.detect(canvas, confidence_threshold=0.6)
@@ -125,6 +130,7 @@ def test_multiple_faces_composited_scene(base_face_image):
 # 4. Face Sizes: Large, Medium, Small
 # -------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "size, min_expected",
     [
@@ -139,7 +145,7 @@ def test_face_scale_variation(base_face_image, size, min_expected):
     face_scaled = cv2.resize(base_face_image, (w, h))
 
     canvas = np.full((500, 500, 3), 200, dtype=np.uint8)
-    canvas[50:50 + h, 50:50 + w] = face_scaled
+    canvas[50 : 50 + h, 50 : 50 + w] = face_scaled
 
     result = detekface.detect(canvas, confidence_threshold=0.5)
     assert result.count >= min_expected
@@ -163,6 +169,7 @@ def test_small_face_crop_detection(base_face_image):
 # 5. Varied Lighting: Low-light, Overexposed, Low Contrast
 # -------------------------------------------------------------------------
 
+
 def test_varied_lighting_robustness(base_face_image):
     """Test face detection under lighting shifts: dim, overexposed, low contrast."""
     # 1. Dim / Low-light (40% intensity)
@@ -184,6 +191,7 @@ def test_varied_lighting_robustness(base_face_image):
 # -------------------------------------------------------------------------
 # 6. Occlusions: Sunglasses & Mouth Cover
 # -------------------------------------------------------------------------
+
 
 def test_face_with_occlusion_sunglasses(base_face_image):
     """Test detection when eyes are occluded with sunglasses bar."""
@@ -207,6 +215,7 @@ def test_face_with_occlusion_sunglasses(base_face_image):
 # 7. Angle / Turned Face Simulation
 # -------------------------------------------------------------------------
 
+
 def test_partially_turned_face_perspective(base_face_image):
     """Test detection when face is subjected to slight perspective warp / shear."""
     h, w = base_face_image.shape[:2]
@@ -224,6 +233,7 @@ def test_partially_turned_face_perspective(base_face_image):
 # 8. Threshold Sensitivity Check
 # -------------------------------------------------------------------------
 
+
 def test_confidence_threshold_filtering(base_face_image):
     """Verify confidence threshold reliably filters low-confidence detections."""
     # Threshold = 0.99 (strict)
@@ -240,6 +250,7 @@ def test_confidence_threshold_filtering(base_face_image):
 # -------------------------------------------------------------------------
 # 9. RGB Conversion Properties
 # -------------------------------------------------------------------------
+
 
 def test_rgb_image_properties(base_face_image):
     """Verify rgb_image properties on DetectionResult and FaceCapture."""
@@ -264,6 +275,7 @@ def test_rgb_image_properties(base_face_image):
 # -------------------------------------------------------------------------
 # 10. Non-finite values rejection
 # -------------------------------------------------------------------------
+
 
 def test_non_finite_image_array_raises_invalid():
     """Verify float array with NaN or Inf raises InvalidImageError."""

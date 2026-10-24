@@ -41,8 +41,8 @@ Standard CSS-style 6-character or 3-character hex color codes with or without a 
 ```python
 detekface.camera(color="#00FF88")  # Neon green (Hex)
 detekface.camera(color="#FF4500")  # Orange-red
-detekface.camera(color="00E5FF")   # Vibrant cyan
-detekface.camera(color="#0F8")     # Shorthand 3-digit hex
+detekface.camera(color="00E5FF")  # Vibrant cyan
+detekface.camera(color="#0F8")  # Shorthand 3-digit hex
 ```
 
 ### 2. Predefined Named Colors
@@ -95,8 +95,8 @@ Enable real-time performance and detection metrics in `camera()` or `video()`:
 ```python
 detekface.camera(
     show_confidence=True,  # Displays confidence badge (e.g., '96.4%') near each face
-    show_fps=True,         # Displays live smoothed processing FPS in top banner
-    show_count=True,       # Displays detected face count in top banner
+    show_fps=True,  # Displays live smoothed processing FPS in top banner
+    show_count=True,  # Displays detected face count in top banner
 )
 ```
 
@@ -122,8 +122,8 @@ from detekface import FaceDetector
 
 detector = FaceDetector(
     confidence_threshold=0.80,  # Stricter detection (fewer false positives)
-    nms_threshold=0.25,         # Aggressive suppression of overlapping boxes
-    top_k=5000,                 # Candidates evaluated prior to NMS
+    nms_threshold=0.25,  # Aggressive suppression of overlapping boxes
+    top_k=5000,  # Candidates evaluated prior to NMS
 )
 ```
 
@@ -225,10 +225,7 @@ You can configure where model weights are stored:
 If working offline or using a custom-trained YuNet model:
 ```python
 # Pass an absolute or relative path to your local .onnx file
-result = detekface.detect(
-    "photo.jpg",
-    model="models/custom_face_detection_yunet_2023mar.onnx"
-)
+result = detekface.detect("photo.jpg", model="models/custom_face_detection_yunet_2023mar.onnx")
 ```
 
 ---
@@ -255,6 +252,7 @@ with detekface.open_camera(camera_index=0, backend="yunet") as session:
 
 ```python
 with detekface.open_camera(camera_index=0) as session:
+
     def handle_frame(result: detekface.DetectionResult):
         for face in result.faces:
             print(f"Face at {face.bbox.as_tuple()} with confidence {face.confidence:.2f}")
@@ -273,11 +271,13 @@ Process lists of image files, directories, or NumPy arrays sequentially with err
 import detekface
 
 # Process multiple files with per-image error collection (no lost inputs):
-results = detekface.detect_many([
-    "images/one.jpg",
-    "images/two.png",
-    "images/missing.jpg",
-])
+results = detekface.detect_many(
+    [
+        "images/one.jpg",
+        "images/two.png",
+        "images/missing.jpg",
+    ]
+)
 
 for item in results:
     if item.is_success:
@@ -301,6 +301,7 @@ print("Total faces detected:", results.total_faces)
   ```python
   def progress(item, current, total):
       print(f"[{current}/{total}] {item.source}")
+
 
   detekface.detect_many("dataset/faces", progress_callback=progress)
   ```

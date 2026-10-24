@@ -51,8 +51,7 @@ def capture(
     save_dir: Optional[Union[str, Path]] = None,
     filename: Optional[str] = None,
     save: bool = True,
-) -> FaceCapture:
-    ...
+) -> FaceCapture: ...
 ```
 
 ### Parameters
@@ -149,12 +148,14 @@ Pass a callable to `on_capture` to receive the `FaceCapture` instance programmat
 import detekface
 from detekface import FaceCapture
 
+
 def handle_face_captured(face: FaceCapture) -> None:
     print(f"\n[EVENT] New face captured!")
     print(f"  Saved path: {face.path}")
     print(f"  Confidence: {face.confidence:.2%}")
     print(f"  Dimensions: {face.width}x{face.height} px")
     # Trigger downstream tasks: upload to cloud, database update, etc.
+
 
 detekface.camera(
     shape="hud",

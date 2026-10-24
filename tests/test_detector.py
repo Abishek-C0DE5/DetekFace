@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import cv2
 import numpy as np
 import pytest
 
@@ -18,7 +17,6 @@ from detekface import (
     Point,
     detect,
     get_cache_dir,
-    resolve_model,
 )
 
 
@@ -105,13 +103,28 @@ def test_single_face_detection_parsing(mock_detector_engine) -> None:
     """Verify exact parsing of coordinates, confidence, and 5 landmarks for a single detected face."""
     detector, mock_cv = mock_detector_engine
     # 15 elements: x, y, w, h, re_x, re_y, le_x, le_y, nt_x, nt_y, rmc_x, rmc_y, lmc_x, lmc_y, score
-    raw_face = np.array([[
-        15.4, 25.6, 120.1, 140.8,
-        35.2, 50.1, 85.3, 51.4,
-        60.0, 85.2,
-        42.1, 115.3, 78.4, 116.2,
-        0.945,
-    ]], dtype=np.float32)
+    raw_face = np.array(
+        [
+            [
+                15.4,
+                25.6,
+                120.1,
+                140.8,
+                35.2,
+                50.1,
+                85.3,
+                51.4,
+                60.0,
+                85.2,
+                42.1,
+                115.3,
+                78.4,
+                116.2,
+                0.945,
+            ]
+        ],
+        dtype=np.float32,
+    )
 
     mock_cv.detect.return_value = (1, raw_face)
 
@@ -144,10 +157,13 @@ def test_single_face_detection_parsing(mock_detector_engine) -> None:
 def test_multiple_face_detection_parsing(mock_detector_engine) -> None:
     """Verify parsing multiple faces in a single image."""
     detector, mock_cv = mock_detector_engine
-    raw_faces = np.array([
-        [10, 10, 50, 50, 20, 20, 40, 20, 30, 30, 22, 40, 38, 40, 0.92],
-        [80, 80, 40, 40, 85, 85, 95, 85, 90, 92, 86, 105, 94, 105, 0.88],
-    ], dtype=np.float32)
+    raw_faces = np.array(
+        [
+            [10, 10, 50, 50, 20, 20, 40, 20, 30, 30, 22, 40, 38, 40, 0.92],
+            [80, 80, 40, 40, 85, 85, 95, 85, 90, 92, 86, 105, 94, 105, 0.88],
+        ],
+        dtype=np.float32,
+    )
 
     mock_cv.detect.return_value = (1, raw_faces)
 
@@ -265,6 +281,8 @@ def test_threshold_validation_errors() -> None:
 # Integration test with real model & licensed sample asset
 # =========================================================================
 
+
+@pytest.mark.network
 def test_real_model_detection_on_sample_asset() -> None:
     """Integration test: Real YuNet model face detection on the official OpenCV sample image.
 

@@ -255,7 +255,10 @@ def resolve_model(
             )
 
     # Resolve official model metadata
-    if model_name_or_path is None or str(model_name_or_path).lower() in ("default", "yunet"):
+    if model_name_or_path is None or str(model_name_or_path).lower() in (
+        "default",
+        "yunet",
+    ):
         metadata = select_default_model()
     else:
         alias = MODEL_ALIASES.get(str(model_name_or_path).lower())

@@ -36,7 +36,7 @@ jobs:
 
       - name: Run automated test suite
         run: |
-          pytest
+          pytest -v -m "not network and not optional_backend"
 
       - name: Build binary wheel and source distribution
         run: |
@@ -45,6 +45,12 @@ jobs:
       - name: Verify package distributions with Twine
         run: |
           twine check --strict dist/*
+
+      - name: Test wheel installation and import
+        run: |
+          pip install dist/*.whl
+          python -c "import detekface; print('Release build verified:', detekface.__version__)"
+          detekface --version
 
       - name: Upload distribution artifacts
         uses: actions/upload-artifact@v4
