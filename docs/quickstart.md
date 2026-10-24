@@ -33,6 +33,17 @@ detekface.camera()
 3. It captures video frames, passes each to the deep learning model, and draws green bounding boxes around faces.
 4. Pressing **`Q`** or **`Escape`** releases the camera and closes the window.
 
+### Customizing Shapes and Colors:
+You can easily change the overlay style and color:
+```python
+import detekface
+
+# Launch camera with a neon cyan HUD overlay
+detekface.camera(shape="hud", color="cyan", thickness=2)
+```
+
+*(See [Webcam Documentation](webcam.md) for all 5 shapes and color options).*
+
 ---
 
 ## 2. Detecting Faces in a Still Photo
