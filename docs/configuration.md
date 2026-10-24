@@ -233,6 +233,38 @@ result = detekface.detect(
 
 ---
 
+## Advanced Camera Session (`open_camera`)
+
+For custom pipelines, web applications, background processing, or programmatic face capture without the built-in GUI preview window, use `detekface.open_camera()` or `detekface.CameraSession`:
+
+```python
+import detekface
+
+# Headless frame iteration with programmatic face capture:
+with detekface.open_camera(camera_index=0, backend="yunet") as session:
+    for result in session:
+        print(f"FPS: {session.fps:.1f} | Faces: {result.count}")
+        if result.has_faces:
+            # Captures largest face crop programmatically from the current frame:
+            face = session.capture(save_dir="captures")
+            print(f"Captured face to {face.path}")
+            break
+```
+
+### Callback-Based Processing
+
+```python
+with detekface.open_camera(camera_index=0) as session:
+    def handle_frame(result: detekface.DetectionResult):
+        for face in result.faces:
+            print(f"Face at {face.bbox.as_tuple()} with confidence {face.confidence:.2f}")
+        return True  # Return False to stop processing
+
+    session.process(handle_frame, max_frames=100)
+```
+
+---
+
 ## Error Handling
 
 Invalid configuration parameters raise `ConfigurationError` with a corrective hint:

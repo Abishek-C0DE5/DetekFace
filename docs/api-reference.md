@@ -91,6 +91,39 @@ Opens a live webcam feed, runs real-time face detection on each frame, draws cus
 
 ---
 
+### `detekface.open_camera`
+
+```python
+def open_camera(
+    camera_index: int = 0,
+    mirror: bool = True,
+    confidence_threshold: float = 0.7,
+    detector: Optional[FaceDetector] = None,
+    backend: str = "yunet",
+    window_title: Optional[str] = None,
+    auto_open: bool = True,
+) -> CameraSession:
+    ...
+```
+
+Opens and returns a managed `CameraSession` context manager for headless processing, frame iteration, custom pipelines, and programmatic face capture.
+
+#### Example Usage
+
+```python
+import detekface
+
+with detekface.open_camera(camera_index=0) as session:
+    for result in session:
+        print(f"Detected {result.count} faces")
+        if result.has_faces:
+            captured = session.capture()
+            print(f"Face crop saved to {captured.path}")
+            break
+```
+
+---
+
 ### `detekface.detect`
 
 ```python
@@ -211,6 +244,55 @@ Processes a prerecorded video file frame-by-frame, rendering detection overlays 
 ---
 
 ## Classes & Data Structures
+
+### `CameraSession`
+
+Managed camera session providing lifecycle management, frame iteration, programmatic face capture, and optional GUI rendering.
+
+```python
+class CameraSession:
+    def __init__(
+        self,
+        camera_index: int = 0,
+        mirror: bool = True,
+        confidence_threshold: float = 0.7,
+        detector: Optional[FaceDetector] = None,
+        backend: str = "yunet",
+        window_title: Optional[str] = None,
+        auto_open: bool = True,
+    ) -> None: ...
+
+    @property
+    def is_open(self) -> bool: ...
+    @property
+    def is_active(self) -> bool: ...
+    @property
+    def latest_frame(self) -> Optional[np.ndarray]: ...
+    @property
+    def latest_result(self) -> Optional[DetectionResult]: ...
+    @property
+    def fps(self) -> float: ...
+    @property
+    def frames_read(self) -> int: ...
+
+    def open(self) -> "CameraSession": ...
+    def close(self) -> None: ...
+    def read(self) -> DetectionResult: ...
+    def read_raw(self) -> np.ndarray: ...
+    def stream(self, max_frames: Optional[int] = None) -> Iterator[DetectionResult]: ...
+    def process(self, callback: Callable[[DetectionResult], Optional[bool]], max_frames: Optional[int] = None) -> int: ...
+    def capture(self, face_index: Optional[int] = None, save_dir: Optional[Union[str, Path]] = "captures", filename: Optional[str] = None, save: bool = True) -> FaceCapture: ...
+    def render(self, shape: str = "rectangle", color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 3, show_confidence: bool = False, show_fps: bool = False, show_count: bool = False) -> np.ndarray: ...
+    def show(self, shape: str = "rectangle", color: Union[str, Sequence[int]] = "#00FF88", thickness: int = 3, show_confidence: bool = False, show_fps: bool = False, show_count: bool = False, window_title: Optional[str] = None, wait_ms: int = 1) -> int: ...
+```
+
+#### Frame Ownership & Memory Semantics
+- **Read & Ingestion**: Each call to `read()` retrieves the latest frame from the video capture device and flips it horizontally if `mirror=True`.
+- **Pristine Clean Frame**: A separate copy (`clean_frame = frame.copy()`) is stored in `latest_frame` and provided as `DetectionResult.image`.
+- **Consumer Ownership**: The consumer owns `DetectionResult.image`. It is never mutated or drawn over by overlay routines.
+- **Overlays & Rendering**: When `session.render()` or `session.show()` is called, overlays are rendered on a newly allocated display copy, guaranteeing that face captures remain unpolluted.
+
+---
 
 ### `FaceDetector`
 

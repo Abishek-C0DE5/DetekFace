@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
-from detekface.camera import camera
+from detekface.camera import CameraSession, camera, open_camera
 from detekface.capture import capture
 from detekface.detector import FaceDetector
 from detekface.drawing import (
@@ -128,6 +128,8 @@ __all__: List[str] = [
     "__version__",
     "detect",
     "camera",
+    "open_camera",
+    "CameraSession",
     "capture",
     "video",
     "draw_faces",

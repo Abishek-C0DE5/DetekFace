@@ -1,8 +1,9 @@
-"""Live webcam capture, customizable face overlay rendering, and capture loop."""
+"""Live webcam capture, customizable face overlay rendering, and camera session management."""
 
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Iterator, Optional, Tuple, Union
 import cv2
+import numpy as np
 
 from detekface.capture import capture
 from detekface.detector import FaceDetector
@@ -14,6 +15,7 @@ from detekface.drawing import (
     validate_render_parameters,
 )
 from detekface.exceptions import (
+    CameraError,
     CameraNotFoundError,
     CameraReadError,
     CaptureError,
@@ -21,7 +23,385 @@ from detekface.exceptions import (
     ConfigurationError,
     NoFaceDetectedError,
 )
-from detekface.types import FaceCapture
+from detekface.types import DetectionResult, FaceCapture
+
+
+class CameraSession:
+    """Manages an active camera device session with explicit lifecycle control.
+
+    Provides frame-by-frame face detection, frame iteration, programmatic face capture,
+    and optional GUI preview rendering.
+
+    Frame Ownership & Memory Semantics:
+        - Each call to `read()` fetches the latest frame from the hardware device.
+        - If `mirror=True`, the frame is horizontally flipped via cv2.flip.
+        - A pristine copy (`clean_frame = frame.copy()`) is stored as `latest_frame`
+          and attached to `DetectionResult.image`.
+        - The consumer owns `DetectionResult.image`. It is guaranteed to be clean,
+          unannotated, and unpolluted by any overlay drawing or annotations.
+        - Overlays are rendered on separate copies when `render()` or `show()` is called.
+
+    Lifecycle & Cleanup:
+        - Can be used as a context manager (`with CameraSession(...) as session:`).
+        - Can be opened and closed manually (`session.open()`, `session.close()`).
+        - Closing is idempotent and guarantees `cap.release()` is called.
+        - Windows created via `show()` are automatically destroyed on session exit.
+    """
+
+    def __init__(
+        self,
+        camera_index: int = 0,
+        mirror: bool = True,
+        confidence_threshold: float = 0.7,
+        detector: Optional[FaceDetector] = None,
+        backend: str = "yunet",
+        window_title: Optional[str] = None,
+        auto_open: bool = True,
+    ) -> None:
+        self.camera_index = camera_index
+        self.mirror = mirror
+        self.confidence_threshold = confidence_threshold
+        self.backend = backend
+        self.window_title = window_title or "detekface - Camera Session"
+        self._window_opened = False
+
+        if detector is None:
+            self.detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
+        else:
+            self.detector = detector
+
+        self._cap: Optional[cv2.VideoCapture] = None
+        self._latest_frame: Optional[np.ndarray] = None
+        self._latest_result: Optional[DetectionResult] = None
+        self._fps_counter = FPSCounter(window_size=30)
+        self._frames_read: int = 0
+
+        if auto_open:
+            self.open()
+
+    @property
+    def is_open(self) -> bool:
+        """Return True if the camera device is currently open and active."""
+        return self._cap is not None and self._cap.isOpened()
+
+    @property
+    def is_active(self) -> bool:
+        """Alias for is_open."""
+        return self.is_open
+
+    @property
+    def latest_frame(self) -> Optional[np.ndarray]:
+        """Return the unannotated pristine BGR frame from the most recent read."""
+        return self._latest_frame
+
+    @property
+    def latest_result(self) -> Optional[DetectionResult]:
+        """Return the DetectionResult from the most recent read."""
+        return self._latest_result
+
+    @property
+    def fps(self) -> float:
+        """Return current smoothed real-time processing FPS throughput."""
+        return self._fps_counter.fps
+
+    @property
+    def frames_read(self) -> int:
+        """Return the total number of frames successfully read in this session."""
+        return self._frames_read
+
+    def open(self) -> "CameraSession":
+        """Open the camera capture hardware device.
+
+        Raises:
+            CameraNotFoundError: If the camera cannot be opened or is not detected.
+        """
+        if self._cap is not None and self._cap.isOpened():
+            return self
+
+        cap = cv2.VideoCapture(self.camera_index)
+        if not cap.isOpened():
+            cap.release()
+            self._cap = None
+            raise CameraNotFoundError(
+                message=f"Could not open camera device with index {self.camera_index}.",
+                hint=(
+                    "Verify your webcam is connected, that camera access permissions are enabled "
+                    "in your operating system settings, and that no other application is currently using it."
+                ),
+            )
+        self._cap = cap
+        return self
+
+    def close(self) -> None:
+        """Release camera hardware resources and destroy any active session windows.
+
+        This method is idempotent and safe to call multiple times.
+        """
+        if self._cap is not None:
+            self._cap.release()
+            self._cap = None
+
+        if self._window_opened:
+            try:
+                cv2.destroyWindow(self.window_title)
+            except cv2.error:
+                pass
+            self._window_opened = False
+
+    def __enter__(self) -> "CameraSession":
+        if not self.is_open:
+            self.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
+
+    def read_raw(self) -> np.ndarray:
+        """Read the next video frame from the camera without running face detection.
+
+        Returns:
+            np.ndarray: Pristine BGR uint8 NumPy array (mirrored if mirror=True).
+
+        Raises:
+            CameraError: If the camera session is not open.
+            CameraReadError: If reading a frame from the hardware fails.
+        """
+        if not self.is_open or self._cap is None:
+            raise CameraError(
+                message="Cannot read from a closed CameraSession.",
+                hint="Call session.open() or use the session within a 'with detekface.open_camera():' context manager.",
+            )
+
+        ret, frame = self._cap.read()
+        if not ret or frame is None:
+            raise CameraReadError(
+                message=f"Failed to read video frame from camera index {self.camera_index}.",
+                hint="The camera may have been disconnected or encountered a hardware/driver error.",
+            )
+
+        self._fps_counter.tick()
+        if self.mirror:
+            frame = cv2.flip(frame, 1)
+
+        clean_frame = frame.copy()
+        self._latest_frame = clean_frame
+        self._frames_read += 1
+        return clean_frame
+
+    def read(self) -> DetectionResult:
+        """Read the next video frame from the camera and detect human faces.
+
+        Returns:
+            DetectionResult: Structured detection result containing detected faces and the unannotated image.
+
+        Raises:
+            CameraError: If the camera session is not open.
+            CameraReadError: If reading a frame from the hardware fails.
+        """
+        clean_frame = self.read_raw()
+        result = self.detector.detect(clean_frame)
+        self._latest_result = result
+        return result
+
+    def capture(
+        self,
+        face_index: Optional[int] = None,
+        save_dir: Optional[Union[str, Path]] = "captures",
+        filename: Optional[str] = None,
+        save: bool = True,
+    ) -> FaceCapture:
+        """Programmatically capture a detected face crop from the current session frame.
+
+        Args:
+            face_index: Optional index of the face to crop. Defaults to largest face by area.
+            save_dir: Target directory for saving cropped file.
+            filename: Custom filename. Defaults to timestamped name.
+            save: Whether to write image to disk (default True).
+
+        Returns:
+            FaceCapture: Cropped face dataclass with unpolluted image array and metadata.
+
+        Raises:
+            CaptureError: If no frames have been read yet in this session.
+            NoFaceDetectedError: If no faces were detected in the latest frame.
+        """
+        if self._latest_result is None:
+            raise CaptureError(
+                message="No frames have been read yet in this camera session.",
+                hint="Call session.read() at least once before attempting to capture a face.",
+            )
+        return capture(
+            self._latest_result,
+            face_index=face_index,
+            save_dir=save_dir,
+            filename=filename,
+            save=save,
+        )
+
+    def __iter__(self) -> "CameraSession":
+        return self
+
+    def __next__(self) -> DetectionResult:
+        if not self.is_open:
+            raise StopIteration
+        try:
+            return self.read()
+        except (CameraReadError, CameraError):
+            raise StopIteration
+
+    def stream(self, max_frames: Optional[int] = None) -> Iterator[DetectionResult]:
+        """Generator yielding DetectionResults on each frame.
+
+        Args:
+            max_frames: Optional maximum number of frames to yield before stopping.
+
+        Yields:
+            DetectionResult: Result for each consecutive camera frame.
+        """
+        count = 0
+        while self.is_open:
+            if max_frames is not None and count >= max_frames:
+                break
+            try:
+                yield self.read()
+                count += 1
+            except (CameraReadError, CameraError):
+                break
+
+    def process(
+        self,
+        callback: Callable[[DetectionResult], Optional[bool]],
+        max_frames: Optional[int] = None,
+    ) -> int:
+        """Process incoming camera frames sequentially using a callback function.
+
+        Args:
+            callback: Function accepting a DetectionResult. If it returns False, processing stops.
+            max_frames: Optional maximum number of frames to process.
+
+        Returns:
+            int: Total number of frames successfully processed.
+        """
+        processed = 0
+        for result in self.stream(max_frames=max_frames):
+            should_continue = callback(result)
+            processed += 1
+            if should_continue is False:
+                break
+        return processed
+
+    def render(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+        show_fps: bool = False,
+        show_count: bool = False,
+    ) -> np.ndarray:
+        """Render overlays on a copy of the latest frame.
+
+        Returns:
+            np.ndarray: Annotated BGR frame array.
+        """
+        if self._latest_frame is None or self._latest_result is None:
+            raise CameraError(
+                message="No frame available to render.",
+                hint="Call session.read() before calling session.render().",
+            )
+        valid_shape, valid_thickness = validate_render_parameters(shape, thickness)
+        bgr_color = parse_color_to_bgr(color)
+
+        display_frame = self._latest_frame.copy()
+        draw_faces(
+            display_frame,
+            self._latest_result.faces,
+            shape=valid_shape,
+            color=bgr_color,
+            thickness=valid_thickness,
+            show_confidence=show_confidence,
+            copy=False,
+        )
+        if show_fps or show_count:
+            draw_metrics_overlay(
+                display_frame,
+                fps=self.fps if show_fps else None,
+                face_count=self._latest_result.count if show_count else None,
+                color_bgr=bgr_color,
+            )
+        return display_frame
+
+    def show(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+        show_fps: bool = False,
+        show_count: bool = False,
+        window_title: Optional[str] = None,
+        wait_ms: int = 1,
+    ) -> int:
+        """Render and display the latest frame in an OpenCV window.
+
+        Args:
+            shape: Overlay shape style.
+            color: Color definition.
+            thickness: Line stroke thickness.
+            show_confidence: Display confidence tags.
+            show_fps: Display smoothed FPS overlay.
+            show_count: Display detected face count.
+            window_title: Window title. Defaults to session window title.
+            wait_ms: Delay in milliseconds for cv2.waitKey.
+
+        Returns:
+            int: Key code returned by cv2.waitKey.
+        """
+        title = window_title or self.window_title
+        annotated = self.render(
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+            show_fps=show_fps,
+            show_count=show_count,
+        )
+        cv2.imshow(title, annotated)
+        self._window_opened = True
+        return cv2.waitKey(wait_ms) & 0xFF
+
+
+def open_camera(
+    camera_index: int = 0,
+    mirror: bool = True,
+    confidence_threshold: float = 0.7,
+    detector: Optional[FaceDetector] = None,
+    backend: str = "yunet",
+    window_title: Optional[str] = None,
+    auto_open: bool = True,
+) -> CameraSession:
+    """Open and return a managed CameraSession context manager.
+
+    Example:
+        import detekface
+
+        with detekface.open_camera(camera_index=0) as session:
+            for result in session:
+                print(f"Detected {result.count} faces")
+                if result.has_faces:
+                    face = session.capture()
+                    print(f"Captured face to {face.path}")
+                    break
+    """
+    return CameraSession(
+        camera_index=camera_index,
+        mirror=mirror,
+        confidence_threshold=confidence_threshold,
+        detector=detector,
+        backend=backend,
+        window_title=window_title,
+        auto_open=auto_open,
+    )
 
 
 def camera(
@@ -89,52 +469,29 @@ def camera(
             hint="Set show_count=True or show_count=False.",
         )
 
-    if detector is None:
-        detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
+    session = CameraSession(
+        camera_index=camera_index,
+        mirror=mirror,
+        confidence_threshold=confidence_threshold,
+        detector=detector,
+        backend=backend,
+        window_title=window_title,
+        auto_open=False,
+    )
 
-    cap = cv2.VideoCapture(camera_index)
-    frames_processed = 0
-
-    # Real-time smoothed FPS throughput tracker
-    fps_counter = FPSCounter(window_size=30)
-
-    # On-screen feedback state
     feedback_text: str = ""
     feedback_frames: int = 0
     feedback_color = (0, 255, 0)
+    frames_processed = 0
 
     try:
-        if not cap.isOpened():
-            raise CameraNotFoundError(
-                message=f"Could not open camera device with index {camera_index}.",
-                hint=(
-                    "Verify your webcam is connected, that camera access permissions are enabled "
-                    "in your operating system settings, and that no other application is currently using it."
-                ),
-            )
+        session.open()
 
         while True:
-            ret, frame = cap.read()
-            if not ret or frame is None:
-                raise CameraReadError(
-                    message=f"Failed to read video frame from camera index {camera_index}.",
-                    hint="The camera may have been disconnected or encountered a hardware/driver error.",
-                )
-
-            current_fps = fps_counter.tick()
-
-            # Horizontally mirror the frame if requested
-            if mirror:
-                frame = cv2.flip(frame, 1)
-
-            # Keep a pristine copy of the frame for detection and clean crops
-            clean_frame = frame.copy()
-
-            # Perform face detection using existing engine
-            result = detector.detect(clean_frame)
+            result = session.read()
+            display_frame = session.latest_frame.copy()
 
             # Draw customizable overlays on the display frame
-            display_frame = frame
             draw_faces(
                 display_frame,
                 result.faces,
@@ -149,7 +506,7 @@ def camera(
             if show_fps or show_count:
                 draw_metrics_overlay(
                     display_frame,
-                    fps=current_fps if show_fps else None,
+                    fps=session.fps if show_fps else None,
                     face_count=result.count if show_count else None,
                     color_bgr=bgr_color,
                 )
@@ -217,8 +574,7 @@ def camera(
                     print(f"[detekface] Error during capture: {cap_err}")
 
     finally:
-        # Guarantee camera release and window destruction even on exception
-        cap.release()
+        session.close()
         try:
             cv2.destroyWindow(window_title)
         except cv2.error:
