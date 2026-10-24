@@ -217,4 +217,7 @@ def camera(
     finally:
         # Guarantee camera release and window destruction even on exception
         cap.release()
-        cv2.destroyAllWindows()
+        try:
+            cv2.destroyWindow(window_title)
+        except cv2.error:
+            pass

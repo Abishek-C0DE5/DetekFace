@@ -201,7 +201,7 @@ class DetectionResult:
     def rgb_image(self) -> np.ndarray:
         """The original image array converted from BGR to RGB format."""
         if not isinstance(self.image, np.ndarray) or self.image.size == 0:
-            return self.image
+            return np.empty((0, 0, 3), dtype=np.uint8)
         return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
     def annotate(
@@ -477,7 +477,7 @@ class FaceCapture:
     def rgb_image(self) -> np.ndarray:
         """The cropped face image converted from BGR to RGB format."""
         if not isinstance(self.image, np.ndarray) or self.image.size == 0:
-            return self.image
+            return np.empty((0, 0, 3), dtype=np.uint8)
         return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
 
     def __repr__(self) -> str:

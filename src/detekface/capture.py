@@ -108,7 +108,7 @@ def capture(
 
     saved_path: Optional[Path] = None
 
-    if save or save_dir is not None:
+    if save:
         target_dir = Path(save_dir).expanduser().resolve() if save_dir else Path("captures").resolve()
         try:
             target_dir.mkdir(parents=True, exist_ok=True)

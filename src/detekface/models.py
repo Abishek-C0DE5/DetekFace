@@ -71,7 +71,6 @@ OFFICIAL_MODELS: Dict[str, ModelMetadata] = {
 
 # Alias mapping for user convenience
 MODEL_ALIASES: Dict[str, str] = {
-    "default": "default",
     "yunet": "default",
     "yunet_2026may": "yunet_2026may",
     "yunet_2026": "yunet_2026may",
@@ -165,7 +164,7 @@ def download_model(
             if calculated_sha256.lower() != metadata.sha256.lower():
                 if temp_path.exists():
                     temp_path.unlink(missing_ok=True)
-                raise ModelCorruptionError(
+                last_error = ModelCorruptionError(
                     message=f"Checksum validation failed for downloaded model {metadata.filename}.",
                     hint=(
                         f"Expected SHA256: {metadata.sha256}\n"
@@ -173,6 +172,7 @@ def download_model(
                         f"The downloaded file was corrupted or incomplete ({total_downloaded} bytes received)."
                     ),
                 )
+                continue
 
             # Atomic replace
             temp_path.replace(destination_path)
@@ -184,6 +184,10 @@ def download_model(
             last_error = e
             continue
 
+    # Exhausted all URLs without a successful download. Prefer surfacing a
+    # checksum corruption (actionable: re-download) over a generic network error.
+    if isinstance(last_error, ModelCorruptionError):
+        raise last_error
     raise ModelDownloadError(
         message=f"Failed to download model '{metadata.name}' ({metadata.filename}) from all official sources.",
         hint=(
