@@ -265,6 +265,48 @@ with detekface.open_camera(camera_index=0) as session:
 
 ---
 
+## Batch Image Detection (`detect_many`)
+
+Process lists of image files, directories, or NumPy arrays sequentially with error isolation:
+
+```python
+import detekface
+
+# Process multiple files with per-image error collection (no lost inputs):
+results = detekface.detect_many([
+    "images/one.jpg",
+    "images/two.png",
+    "images/missing.jpg",
+])
+
+for item in results:
+    if item.is_success:
+        print(f"{item.source}: Found {item.count} faces")
+    else:
+        print(f"{item.source}: Failed with error: {item.error}")
+
+print("Total faces detected:", results.total_faces)
+```
+
+### Batch Configuration Options
+
+- **Fail-Fast Mode** (`fail_fast=True`):
+  Stops immediately and raises an exception upon encountering the first corrupt or missing file.
+- **Directory Scanning & Recursion** (`recursive=True`):
+  Scans all supported images (`.jpg`, `.png`, `.webp`, `.bmp`) within a folder and its subdirectories.
+- **Memory Conservation** (`keep_images=False`):
+  Frees image pixel buffers from memory immediately after inference, enabling large-scale batches (thousands of images) without RAM exhaustion.
+- **Progress Callback** (`progress_callback=callback`):
+  Monitor processing progress without external dependencies:
+  ```python
+  def progress(item, current, total):
+      print(f"[{current}/{total}] {item.source}")
+
+  detekface.detect_many("dataset/faces", progress_callback=progress)
+  ```
+
+---
+
 ## Error Handling
 
 Invalid configuration parameters raise `ConfigurationError` with a corrective hint:

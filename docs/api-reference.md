@@ -160,6 +160,59 @@ Detects human faces in a still image or raw NumPy BGR array.
 
 ---
 
+### `detekface.detect_many`
+
+```python
+def detect_many(
+    images: Union[str, Path, Sequence[Union[str, Path, np.ndarray]]],
+    confidence_threshold: float = 0.7,
+    nms_threshold: float = 0.3,
+    top_k: int = 5000,
+    model: Optional[Union[str, Path]] = None,
+    cache_dir: Optional[Union[str, Path]] = None,
+    backend: str = "yunet",
+    detector: Optional[FaceDetector] = None,
+    fail_fast: bool = False,
+    progress_callback: Optional[Callable] = None,
+    recursive: bool = False,
+    keep_images: bool = True,
+) -> BatchDetectionResult:
+    ...
+```
+
+Performs face detection across multiple images, file paths, or directories.
+
+#### Parameters
+- **`images`**: A filesystem path, directory path, NumPy array, or sequence thereof.
+- **`fail_fast`** (`bool`, default: `False`): If `True`, stops and raises immediately on the first error. If `False` (default), collects per-image errors into `BatchItemResult.error` without losing inputs.
+- **`progress_callback`** (`Optional[Callable]`, default: `None`): Callable invoked after processing each image. Supports signatures `(item)`, `(current, total)`, or `(item, current, total)`.
+- **`recursive`** (`bool`, default: `False`): If `True` and a directory path is passed, recursively scans subdirectories for image files.
+- **`keep_images`** (`bool`, default: `True`): If `False`, frees large pixel arrays from memory to conserve RAM during massive batch jobs.
+
+#### Example Usage
+
+```python
+import detekface
+
+# Process a list of images (collects errors by default)
+results = detekface.detect_many([
+    "photos/alice.jpg",
+    "photos/bob.png",
+    "photos/missing.jpg",
+])
+
+for item in results:
+    if item.is_success:
+        print(f"{item.source}: Found {item.count} faces")
+    else:
+        print(f"{item.source}: Failed with error {item.error}")
+
+# Total faces detected across the entire batch
+print("Total faces:", results.total_faces)
+```
+
+---
+
 ### `detekface.capture`
 
 ```python
@@ -354,6 +407,51 @@ class DetectionResult:
     def capture(self, face_index: Optional[int] = None,
                 save_dir: Optional[Union[str, Path]] = None,
                 filename: Optional[str] = None, save: bool = True) -> FaceCapture: ...
+```
+
+---
+
+### `BatchItemResult`
+
+Result for an individual image item within a batch.
+
+```python
+@dataclass
+class BatchItemResult:
+    source: Union[str, Path, np.ndarray]
+    result: Optional[DetectionResult] = None
+    error: Optional[Exception] = None
+
+    @property
+    def is_success(self) -> bool: ...
+    @property
+    def is_failure(self) -> bool: ...
+    @property
+    def faces(self) -> List[FaceDetection]: ...
+    @property
+    def count(self) -> int: ...
+    @property
+    def has_faces(self) -> bool: ...
+```
+
+---
+
+### `BatchDetectionResult`
+
+List-like container for batch detection results preserving input ordering.
+
+```python
+class BatchDetectionResult(List[BatchItemResult]):
+    @property
+    def successes(self) -> List[BatchItemResult]: ...
+    @property
+    def failures(self) -> List[BatchItemResult]: ...
+    @property
+    def total_faces(self) -> int: ...
+    @property
+    def has_failures(self) -> bool: ...
+
+    def as_dict(self) -> Dict[Union[str, Path, int], Optional[DetectionResult]]: ...
 ```
 
 ---

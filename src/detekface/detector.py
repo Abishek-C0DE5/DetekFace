@@ -252,3 +252,35 @@ class FaceDetector:
 
         faces = self._backend.detect(bgr_image)
         return DetectionResult(faces=faces, image=bgr_image)
+
+    def detect_many(
+        self,
+        images: Union[str, Path, Sequence[Union[str, Path, np.ndarray]]],
+        fail_fast: bool = False,
+        progress_callback: Optional[Callable] = None,
+        recursive: bool = False,
+        keep_images: bool = True,
+    ):
+        """Perform face detection across multiple images or a directory.
+
+        Args:
+            images: File path, directory path, NumPy array, or sequence thereof.
+            fail_fast: If True, stop and raise immediately upon encountering an error.
+            progress_callback: Optional callable invoked after each processed image.
+            recursive: If True and directory is passed, recursively scan subdirectories.
+            keep_images: If False, drops heavy image arrays from returned results to save memory.
+
+        Returns:
+            BatchDetectionResult: List of BatchItemResult objects preserving input ordering.
+        """
+        from detekface.batch import run_batch_detection
+
+        return run_batch_detection(
+            detector=self,
+            images=images,
+            fail_fast=fail_fast,
+            progress_callback=progress_callback,
+            recursive=recursive,
+            keep_images=keep_images,
+        )
+
