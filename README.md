@@ -59,6 +59,8 @@ pip install "detekface[mediapipe]"
 - 📹 **2-Line Live Webcam**: Start a real-time face detection camera stream with `detekface.camera()`.
 - 🔌 **Multiple Backends**: Seamlessly switch between built-in YuNet (`backend="yunet"`) and optional Google MediaPipe (`backend="mediapipe"`).
 - 🖼️ **Still-Image Face Detection**: Inspect faces, bounding boxes, confidence scores, and facial landmarks using `detekface.detect()`.
+- 📦 **Batch Image Processing**: Process directories or image lists with `detekface.detect_many()`.
+- 💻 **Command-Line Interface**: Run webcam, photo, batch, or video detection straight from terminal via `detekface`.
 - ✂️ **Pristine Face Cropping**: Extract clean, unpolluted face crops programmatically or with the <kbd>C</kbd> key. Drawn overlays never contaminate saved crops.
 - 🎨 **5 Distinct Overlay Styles**: Choose between tactical corner brackets, modern rounded boxes, classic rectangles, geometric circles, or a full sci-fi HUD.
 - 📊 **Real-Time Telemetry**: Display smoothed rolling-average FPS, detected face count badges, and confidence percentage tags.
@@ -334,6 +336,32 @@ print(f"Exported annotated video to: {saved_path}")
 ```
 
 *(Note: Audio tracks are not re-encoded; only visual video frames are processed and exported).*
+
+---
+
+## 13. Command-Line Interface (CLI)
+
+`detekface` provides a lightweight, beginner-friendly command-line tool with zero extra dependencies:
+
+```bash
+# View general help and available commands
+detekface --help
+
+# Launch live webcam viewfinder
+detekface camera --shape hud --color "#00FF88" --show-fps
+
+# Detect faces in a photo and save annotated output
+detekface image photo.jpg --output annotated.jpg --overwrite
+
+# Crop the largest face directly from terminal
+detekface image photo.jpg --crop-face avatar.jpg --overwrite
+
+# Batch process an entire folder of photos
+detekface batch ./photos --output ./annotated_photos --recursive
+
+# Process and export an annotated video file
+detekface video clip.mp4 --output clip_detected.mp4 --no-preview
+```
 
 ---
 

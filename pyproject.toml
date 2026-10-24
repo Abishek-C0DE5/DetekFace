@@ -34,6 +34,9 @@ Homepage = "https://github.com/Abishek-C0DE5/DetekFace"
 Repository = "https://github.com/Abishek-C0DE5/DetekFace.git"
 Issues = "https://github.com/Abishek-C0DE5/DetekFace/issues"
 
+[project.scripts]
+detekface = "detekface.cli:main"
+
 [project.optional-dependencies]
 mediapipe = [
     "mediapipe>=0.10.0",
