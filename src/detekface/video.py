@@ -1,5 +1,3 @@
-"""Prerecorded video file face detection and processing pipeline."""
-
 import math
 from pathlib import Path
 from typing import Callable, Optional, Tuple, Union
@@ -29,7 +27,7 @@ SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 
 
 def video(
-    path: Union[str, Path],
+    path: Optional[Union[str, Path]] = None,
     output_path: Optional[Union[str, Path]] = None,
     show: bool = True,
     confidence_threshold: float = 0.7,
@@ -45,6 +43,8 @@ def video(
     window_title: str = "detekface - Video Face Detection",
     max_frames: Optional[int] = None,
     codec: Optional[str] = None,
+    source: Optional[Union[str, Path]] = None,
+    output: Optional[Union[str, Path]] = None,
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -84,6 +84,11 @@ def video(
         ConfigurationError: If styling or display parameters are invalid.
         VideoWriteError: If creating or writing to the output video file fails.
     """
+    if path is None and source is not None:
+        path = source
+    if output_path is None and output is not None:
+        output_path = output
+
     if path is None or not isinstance(path, (str, Path)) or not str(path).strip():
         raise InvalidVideoError(
             message=f"Invalid video path: {path!r}.",

@@ -5,14 +5,13 @@ color conversion, confidence labeling, FPS calculation, and face count status me
 """
 
 from collections import deque
-import math
 import time
-from typing import Deque, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Deque, Dict, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
 from detekface.exceptions import ConfigurationError
-from detekface.types import BoundingBox, DetectionResult, FaceDetection
+from detekface.types import FaceDetection
 
 # Documented named color mapping (RGB values)
 NAMED_COLORS: Dict[str, Tuple[int, int, int]] = {

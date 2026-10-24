@@ -60,6 +60,18 @@ class BoundingBox:
         """Return (x1, y1, x2, y2) format."""
         return (self.x1, self.y1, self.x2, self.y2)
 
+    def as_ltrb(self) -> Tuple[int, int, int, int]:
+        """Return (left, top, right, bottom) format (alias for as_xyxy)."""
+        return self.as_xyxy()
+
+    def clamp(self, max_width: int, max_height: int) -> "BoundingBox":
+        """Return a new BoundingBox clamped to image boundaries [0, max_width] and [0, max_height]."""
+        x1 = max(0, min(self.x1, max_width))
+        y1 = max(0, min(self.y1, max_height))
+        x2 = max(0, min(self.x2, max_width))
+        y2 = max(0, min(self.y2, max_height))
+        return BoundingBox(x=x1, y=y1, width=max(0, x2 - x1), height=max(0, y2 - y1))
+
 
 @dataclass(frozen=True)
 class Point:
@@ -119,6 +131,11 @@ class FaceDetection:
     bbox: BoundingBox
     confidence: float
     landmarks: Optional[FaceLandmarks] = None
+
+    @property
+    def box(self) -> BoundingBox:
+        """BoundingBox alias for bbox."""
+        return self.bbox
 
     @property
     def x(self) -> int:
@@ -241,6 +258,21 @@ class DetectionResult:
         )
 
     def draw(
+        self,
+        shape: str = "rectangle",
+        color: Union[str, Tuple[int, int, int]] = "#00FF88",
+        thickness: int = 3,
+        show_confidence: bool = False,
+    ) -> np.ndarray:
+        """Alias for `annotate()` to obtain the rendered image array."""
+        return self.annotate(
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+        )
+
+    def render(
         self,
         shape: str = "rectangle",
         color: Union[str, Tuple[int, int, int]] = "#00FF88",

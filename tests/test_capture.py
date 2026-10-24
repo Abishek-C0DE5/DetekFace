@@ -252,3 +252,46 @@ def test_real_model_detection_and_capture_integration(tmp_path: Path) -> None:
     assert captured.path is not None
     assert captured.path.is_file()
     assert captured.path.stat().st_size > 0
+
+
+def test_capture_in_memory_only_with_save_false(tmp_path: Path) -> None:
+    """Verify that save=False prevents file creation even if save_dir is specified."""
+    img = np.full((100, 100, 3), 128, dtype=np.uint8)
+    face = _create_dummy_detection(x=10, y=10, width=40, height=50)
+    result = DetectionResult(faces=[face], image=img)
+
+    captured = capture(result, save=False, save_dir=tmp_path)
+    assert captured.path is None
+    assert list(tmp_path.glob("*")) == []
+    assert captured.image.shape == (50, 40, 3)
+
+
+def test_face_detection_and_capture_box_property_alias() -> None:
+    """Verify that FaceDetection.box and FaceCapture.box properties correctly return bbox."""
+    img = np.full((100, 100, 3), 128, dtype=np.uint8)
+    face = _create_dummy_detection(x=10, y=10, width=40, height=50)
+    assert face.box == face.bbox
+    assert face.box.x == 10
+    assert face.box.as_ltrb() == (10, 10, 50, 60)
+
+    # Test BoundingBox.clamp
+    clamped = face.box.clamp(max_width=30, max_height=35)
+    assert clamped.x == 10
+    assert clamped.y == 10
+    assert clamped.x2 == 30
+    assert clamped.y2 == 35
+
+    result = DetectionResult(faces=[face], image=img)
+    captured = capture(result, save=False)
+    assert captured.box == captured.bbox
+
+
+def test_detection_result_render_alias() -> None:
+    """Verify that DetectionResult.render() is a working alias for annotate()."""
+    img = np.full((100, 100, 3), 128, dtype=np.uint8)
+    face = _create_dummy_detection(x=10, y=10, width=40, height=50)
+    result = DetectionResult(faces=[face], image=img)
+
+    rendered = result.render(shape="corners", color="cyan")
+    annotated = result.annotate(shape="corners", color="cyan")
+    np.testing.assert_array_equal(rendered, annotated)

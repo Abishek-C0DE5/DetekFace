@@ -100,12 +100,6 @@ def capture(
         )
 
     cropped_image = result.image[y1:y2, x1:x2].copy()
-    if cropped_image.size == 0:
-        raise InvalidCropError(
-            message="Cropped face image array is empty (0 pixels).",
-            hint="Check image dimensions and bounding box coordinates.",
-        )
-
     saved_path: Optional[Path] = None
 
     if save:

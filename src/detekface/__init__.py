@@ -5,7 +5,7 @@ clean dataclass outputs, and robust error handling.
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 import numpy as np
 
 from detekface.camera import camera
@@ -67,7 +67,7 @@ from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
 __version__: str = "0.1.0"
 
-_default_detector: Optional[FaceDetector] = None
+_detector_cache: Dict[Tuple, FaceDetector] = {}
 
 
 def detect(
@@ -91,33 +91,24 @@ def detect(
     Returns:
         DetectionResult containing detected faces and the original BGR image.
     """
-    global _default_detector
-
-    # Reuse cached default detector for identical standard configurations
-    is_standard = (
-        model is None
-        and cache_dir is None
-        and confidence_threshold == 0.7
-        and nms_threshold == 0.3
-        and top_k == 5000
+    cache_key = (
+        str(model) if model is not None else None,
+        float(confidence_threshold),
+        float(nms_threshold),
+        int(top_k),
+        str(cache_dir) if cache_dir is not None else None,
     )
+    detector = _detector_cache.get(cache_key)
+    if detector is None:
+        detector = FaceDetector(
+            model=model,
+            confidence_threshold=confidence_threshold,
+            nms_threshold=nms_threshold,
+            top_k=top_k,
+            cache_dir=cache_dir,
+        )
+        _detector_cache[cache_key] = detector
 
-    if is_standard:
-        if _default_detector is None:
-            _default_detector = FaceDetector(
-                confidence_threshold=0.7,
-                nms_threshold=0.3,
-                top_k=5000,
-            )
-        return _default_detector.detect(image)
-
-    detector = FaceDetector(
-        model=model,
-        confidence_threshold=confidence_threshold,
-        nms_threshold=nms_threshold,
-        top_k=top_k,
-        cache_dir=cache_dir,
-    )
     return detector.detect(image)
 
 

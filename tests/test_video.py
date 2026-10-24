@@ -334,3 +334,11 @@ def test_display_flags_validation(synthetic_video_path, flag_name, bad_value):
     kwargs = {flag_name: bad_value}
     with pytest.raises(ConfigurationError):
         detekface.video(synthetic_video_path, **kwargs)
+
+
+def test_video_source_and_output_keyword_aliases(synthetic_video_path, tmp_path):
+    """Verify that source and output keyword aliases work properly."""
+    out_file = tmp_path / "alias_out.mp4"
+    res = detekface.video(source=synthetic_video_path, output=out_file, show=False, max_frames=2)
+    assert res is not None
+    assert res.is_file()

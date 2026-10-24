@@ -1,7 +1,7 @@
 """Core face detection engine and detection pipeline."""
 
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 import cv2
 import numpy as np
 
