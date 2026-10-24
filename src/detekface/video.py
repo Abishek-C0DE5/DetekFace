@@ -46,6 +46,8 @@ def video(
     source: Optional[Union[str, Path]] = None,
     output: Optional[Union[str, Path]] = None,
     backend: str = "yunet",
+    frame_skip: int = 0,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -75,6 +77,11 @@ def video(
         max_frames: Optional maximum number of frames to process before stopping.
         codec: Optional 4-character FourCC codec string (e.g. 'mp4v', 'MJPG'). If None,
                selected automatically based on output file extension.
+        source: Backward-compatible alias for path.
+        output: Backward-compatible alias for output_path.
+        backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
+        frame_skip: Number of intermediate frames to skip detection on to boost throughput (default 0).
+        input_size: Optional inference resolution (width, height) for high-FPS detection scaling.
 
     Returns:
         The resolved Path of the saved output video file if output_path was provided, else None.
@@ -133,6 +140,12 @@ def video(
             hint="Set show_count=True or show_count=False.",
         )
 
+    if not isinstance(frame_skip, int) or isinstance(frame_skip, bool) or frame_skip < 0:
+        raise ConfigurationError(
+            message=f"frame_skip must be an integer >= 0, got {frame_skip!r}.",
+            hint="Set frame_skip=0 for full processing, or frame_skip=1/2 to process every 2nd/3rd frame.",
+        )
+
     # Validate output destination if requested
     target_output: Optional[Path] = None
     fourcc_code: str = "mp4v"
@@ -187,13 +200,24 @@ def video(
                 fourcc_code = "mp4v"
 
     if detector is None:
-        detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
+        if input_size is not None:
+            detector = FaceDetector(
+                backend=backend,
+                confidence_threshold=confidence_threshold,
+                input_size=input_size,
+            )
+        else:
+            detector = FaceDetector(
+                backend=backend,
+                confidence_threshold=confidence_threshold,
+            )
 
     cap = cv2.VideoCapture(str(file_path))
     writer: Optional[cv2.VideoWriter] = None
 
     fps_counter = FPSCounter(window_size=30)
     frames_processed = 0
+    latest_result = None
 
     feedback_text: str = ""
     feedback_frames: int = 0
@@ -249,8 +273,11 @@ def video(
             # Keep pristine clean frame for detection and clean crops
             clean_frame = frame.copy()
 
-            # Perform face detection
-            result = detector.detect(clean_frame)
+            # Perform face detection (reusing detections on skipped frames)
+            should_detect = (frame_skip == 0) or (frames_processed % (frame_skip + 1) == 0) or (latest_result is None)
+            if should_detect:
+                latest_result = detector.detect(clean_frame)
+            result = latest_result
 
             # Draw overlays on display/output frame
             display_frame = frame

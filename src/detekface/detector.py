@@ -1,7 +1,7 @@
 """Core face detection engine and detection pipeline."""
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
@@ -33,6 +33,22 @@ def _validate_threshold(name: str, value: float, min_val: float = 0.0, max_val: 
             message=f"Threshold '{name}' out of range: {value}.",
             hint=f"The value must be between {min_val} and {max_val}.",
         )
+
+
+def _validate_input_size(input_size: Optional[Tuple[int, int]]) -> Optional[Tuple[int, int]]:
+    """Validate optional input_size tuple (width, height)."""
+    if input_size is None:
+        return None
+    if (
+        not isinstance(input_size, (tuple, list))
+        or len(input_size) != 2
+        or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 32 for v in input_size)
+    ):
+        raise ConfigurationError(
+            message=f"Invalid input_size: {input_size}. Expected a tuple of 2 positive integers (width, height) >= 32.",
+            hint="Set input_size to a resolution tuple like (640, 480) or (320, 240), or leave as None.",
+        )
+    return (int(input_size[0]), int(input_size[1]))
 
 
 def _load_and_validate_image(image_input: Union[str, Path, np.ndarray]) -> np.ndarray:
@@ -151,6 +167,64 @@ def _parse_yunet_detections(raw_faces: Optional[np.ndarray]) -> List[FaceDetecti
     return detections
 
 
+def _scale_point(pt: Optional[Point], scale_x: float, scale_y: float, max_w: int, max_h: int) -> Optional[Point]:
+    """Rescale a single landmark point and clamp to image bounds."""
+    if pt is None:
+        return None
+    px = max(0, min(int(round(pt.x * scale_x)), max_w - 1))
+    py = max(0, min(int(round(pt.y * scale_y)), max_h - 1))
+    return Point(x=px, y=py)
+
+
+def _transform_detections_to_original_scale(
+    faces: List[FaceDetection],
+    scale_x: float,
+    scale_y: float,
+    orig_w: int,
+    orig_h: int,
+) -> List[FaceDetection]:
+    """Rescale detections from inference resolution back to original image resolution."""
+    if not faces:
+        return []
+
+    scaled: List[FaceDetection] = []
+    for face in faces:
+        raw_x = face.bbox.x * scale_x
+        raw_y = face.bbox.y * scale_y
+        raw_w = face.bbox.width * scale_x
+        raw_h = face.bbox.height * scale_y
+
+        x = max(0, min(int(round(raw_x)), orig_w - 1))
+        y = max(0, min(int(round(raw_y)), orig_h - 1))
+        w = max(1, min(int(round(raw_w)), orig_w - x))
+        h = max(1, min(int(round(raw_h)), orig_h - y))
+        bbox = BoundingBox(x=x, y=y, width=w, height=h)
+
+        lm = face.landmarks
+        if lm is not None:
+            new_landmarks = FaceLandmarks(
+                right_eye=_scale_point(lm.right_eye, scale_x, scale_y, orig_w, orig_h),
+                left_eye=_scale_point(lm.left_eye, scale_x, scale_y, orig_w, orig_h),
+                nose_tip=_scale_point(lm.nose_tip, scale_x, scale_y, orig_w, orig_h),
+                right_mouth=_scale_point(lm.right_mouth, scale_x, scale_y, orig_w, orig_h),
+                left_mouth=_scale_point(lm.left_mouth, scale_x, scale_y, orig_w, orig_h),
+                mouth_center=_scale_point(lm.mouth_center, scale_x, scale_y, orig_w, orig_h),
+                right_ear=_scale_point(lm.right_ear, scale_x, scale_y, orig_w, orig_h),
+                left_ear=_scale_point(lm.left_ear, scale_x, scale_y, orig_w, orig_h),
+            )
+        else:
+            new_landmarks = None
+
+        scaled.append(
+            FaceDetection(
+                bbox=bbox,
+                confidence=face.confidence,
+                landmarks=new_landmarks,
+            )
+        )
+    return scaled
+
+
 class FaceDetector:
     """Unified face detector wrapper with automatic model loading and input handling.
 
@@ -165,6 +239,7 @@ class FaceDetector:
         top_k: int = 5000,
         cache_dir: Optional[Union[str, Path]] = None,
         backend: str = "yunet",
+        input_size: Optional[Tuple[int, int]] = None,
     ) -> None:
         """Initialize the FaceDetector.
 
@@ -175,11 +250,15 @@ class FaceDetector:
             top_k: Maximum candidate faces to retain prior to NMS (YuNet only).
             cache_dir: Optional custom directory for caching models.
             backend: Face detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
+            input_size: Optional fixed resolution (width, height) for model inference.
+                When specified, frames are downscaled/upscaled for model inference and
+                detected coordinates are mapped accurately back to original image space.
         """
         from detekface.backends import get_backend
 
         clean_backend = str(backend).strip().lower()
         _validate_threshold("confidence_threshold", confidence_threshold, 0.0, 1.0)
+        self._input_size = _validate_input_size(input_size)
         model_to_pass = model
         if clean_backend == "yunet":
             _validate_threshold("nms_threshold", nms_threshold, 0.0, 1.0)
@@ -232,6 +311,11 @@ class FaceDetector:
         """IoU threshold for non-maximum suppression."""
         return self._nms_threshold
 
+    @property
+    def input_size(self) -> Optional[Tuple[int, int]]:
+        """Configured inference resolution (width, height), or None for native resolution."""
+        return self._input_size
+
     def detect(self, image: Union[str, Path, np.ndarray]) -> DetectionResult:
         """Perform face detection on a single image.
 
@@ -239,7 +323,7 @@ class FaceDetector:
             image: A filesystem path to an image file, or a NumPy array in BGR format.
 
         Returns:
-            DetectionResult containing detected FaceDetection instances and the BGR image array.
+            DetectionResult containing detected FaceDetection instances and the original BGR image.
         """
         bgr_image = _load_and_validate_image(image)
         height, width = bgr_image.shape[:2]
@@ -250,7 +334,16 @@ class FaceDetector:
                 hint="Ensure the image has non-zero width and height.",
             )
 
-        faces = self._backend.detect(bgr_image)
+        if self._input_size is not None and (width, height) != self._input_size:
+            infer_w, infer_h = self._input_size
+            inference_image = cv2.resize(bgr_image, (infer_w, infer_h), interpolation=cv2.INTER_LINEAR)
+            raw_faces = self._backend.detect(inference_image)
+            scale_x = width / float(infer_w)
+            scale_y = height / float(infer_h)
+            faces = _transform_detections_to_original_scale(raw_faces, scale_x, scale_y, orig_w=width, orig_h=height)
+        else:
+            faces = self._backend.detect(bgr_image)
+
         return DetectionResult(faces=faces, image=bgr_image)
 
     def detect_many(

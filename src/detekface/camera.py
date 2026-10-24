@@ -57,6 +57,8 @@ class CameraSession:
         backend: str = "yunet",
         window_title: Optional[str] = None,
         auto_open: bool = True,
+        resolution: Optional[Tuple[int, int]] = None,
+        input_size: Optional[Tuple[int, int]] = None,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -65,8 +67,33 @@ class CameraSession:
         self.window_title = window_title or "detekface - Camera Session"
         self._window_opened = False
 
+        if resolution is not None:
+            if (
+                not isinstance(resolution, (tuple, list))
+                or len(resolution) != 2
+                or not all(isinstance(v, int) and not isinstance(v, bool) and v >= 32 for v in resolution)
+            ):
+                raise ConfigurationError(
+                    message=f"Invalid camera resolution: {resolution}. Expected (width, height) >= 32.",
+                    hint="Set resolution to a standard size like (1280, 720) or (640, 480), or None.",
+                )
+            self.resolution: Optional[Tuple[int, int]] = (int(resolution[0]), int(resolution[1]))
+        else:
+            self.resolution = None
+
+        self.input_size = input_size
         if detector is None:
-            self.detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
+            if input_size is not None:
+                self.detector = FaceDetector(
+                    backend=backend,
+                    confidence_threshold=confidence_threshold,
+                    input_size=input_size,
+                )
+            else:
+                self.detector = FaceDetector(
+                    backend=backend,
+                    confidence_threshold=confidence_threshold,
+                )
         else:
             self.detector = detector
 
@@ -129,6 +156,12 @@ class CameraSession:
                     "in your operating system settings, and that no other application is currently using it."
                 ),
             )
+
+        if self.resolution is not None:
+            w, h = self.resolution
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
+
         self._cap = cap
         return self
 
@@ -181,9 +214,10 @@ class CameraSession:
 
         self._fps_counter.tick()
         if self.mirror:
-            frame = cv2.flip(frame, 1)
+            clean_frame = cv2.flip(frame, 1)
+        else:
+            clean_frame = frame.copy()
 
-        clean_frame = frame.copy()
         self._latest_frame = clean_frame
         self._frames_read += 1
         return clean_frame
@@ -379,6 +413,8 @@ def open_camera(
     backend: str = "yunet",
     window_title: Optional[str] = None,
     auto_open: bool = True,
+    resolution: Optional[Tuple[int, int]] = None,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> CameraSession:
     """Open and return a managed CameraSession context manager.
 
@@ -401,6 +437,8 @@ def open_camera(
         backend=backend,
         window_title=window_title,
         auto_open=auto_open,
+        resolution=resolution,
+        input_size=input_size,
     )
 
 
@@ -420,6 +458,8 @@ def camera(
     window_title: str = "detekface - Live Face Detection",
     max_frames: Optional[int] = None,
     backend: str = "yunet",
+    resolution: Optional[Tuple[int, int]] = None,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -444,6 +484,8 @@ def camera(
         window_title: Window title for the OpenCV preview window.
         max_frames: Optional maximum number of frames to process before closing (useful for automated testing).
         backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
+        resolution: Optional capture hardware resolution (width, height) to negotiate with camera.
+        input_size: Optional inference resolution (width, height) for high-FPS detection scaling.
 
     Raises:
         ConfigurationError: If shape, color, thickness, or display flags are invalid.
@@ -477,6 +519,8 @@ def camera(
         backend=backend,
         window_title=window_title,
         auto_open=False,
+        resolution=resolution,
+        input_size=input_size,
     )
 
     feedback_text: str = ""

@@ -87,6 +87,7 @@ def detect(
     model: Optional[Union[str, Path]] = None,
     cache_dir: Optional[Union[str, Path]] = None,
     backend: str = "yunet",
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -98,10 +99,12 @@ def detect(
         model: Optional model name, alias, or custom local model path.
         cache_dir: Optional custom directory to store/retrieve cached models.
         backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
+        input_size: Optional inference resolution tuple (width, height) for performance scaling.
 
     Returns:
         DetectionResult containing detected faces and the original BGR image.
     """
+    clean_input_size = (int(input_size[0]), int(input_size[1])) if input_size is not None else None
     cache_key = (
         str(backend).strip().lower(),
         str(model) if model is not None else None,
@@ -109,17 +112,29 @@ def detect(
         float(nms_threshold),
         int(top_k),
         str(cache_dir) if cache_dir is not None else None,
+        clean_input_size,
     )
     detector = _detector_cache.get(cache_key)
     if detector is None:
-        detector = FaceDetector(
-            model=model,
-            confidence_threshold=confidence_threshold,
-            nms_threshold=nms_threshold,
-            top_k=top_k,
-            cache_dir=cache_dir,
-            backend=backend,
-        )
+        if input_size is not None:
+            detector = FaceDetector(
+                model=model,
+                confidence_threshold=confidence_threshold,
+                nms_threshold=nms_threshold,
+                top_k=top_k,
+                cache_dir=cache_dir,
+                backend=backend,
+                input_size=input_size,
+            )
+        else:
+            detector = FaceDetector(
+                model=model,
+                confidence_threshold=confidence_threshold,
+                nms_threshold=nms_threshold,
+                top_k=top_k,
+                cache_dir=cache_dir,
+                backend=backend,
+            )
         _detector_cache[cache_key] = detector
 
     return detector.detect(image)
@@ -138,6 +153,7 @@ def detect_many(
     progress_callback: Optional[Callable] = None,
     recursive: bool = False,
     keep_images: bool = True,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> BatchDetectionResult:
     """Detect faces across a batch of images or an image directory.
 
@@ -155,11 +171,13 @@ def detect_many(
         progress_callback: Optional callable called after processing each image.
         recursive: If True, scans subdirectories when a directory path is passed.
         keep_images: If False, drops heavy image pixel arrays from returned results to conserve RAM.
+        input_size: Optional inference resolution tuple (width, height) for performance scaling.
 
     Returns:
         BatchDetectionResult containing ordered BatchItemResult objects.
     """
     if detector is None:
+        clean_input_size = (int(input_size[0]), int(input_size[1])) if input_size is not None else None
         cache_key = (
             str(backend).strip().lower(),
             str(model) if model is not None else None,
@@ -167,17 +185,29 @@ def detect_many(
             float(nms_threshold),
             int(top_k),
             str(cache_dir) if cache_dir is not None else None,
+            clean_input_size,
         )
         detector = _detector_cache.get(cache_key)
         if detector is None:
-            detector = FaceDetector(
-                model=model,
-                confidence_threshold=confidence_threshold,
-                nms_threshold=nms_threshold,
-                top_k=top_k,
-                cache_dir=cache_dir,
-                backend=backend,
-            )
+            if input_size is not None:
+                detector = FaceDetector(
+                    model=model,
+                    confidence_threshold=confidence_threshold,
+                    nms_threshold=nms_threshold,
+                    top_k=top_k,
+                    cache_dir=cache_dir,
+                    backend=backend,
+                    input_size=input_size,
+                )
+            else:
+                detector = FaceDetector(
+                    model=model,
+                    confidence_threshold=confidence_threshold,
+                    nms_threshold=nms_threshold,
+                    top_k=top_k,
+                    cache_dir=cache_dir,
+                    backend=backend,
+                )
             _detector_cache[cache_key] = detector
 
     from detekface.batch import run_batch_detection

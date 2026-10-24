@@ -126,6 +126,7 @@ class YuNetBackend(BaseFaceBackend):
                 message=f"OpenCV returned None when initializing FaceDetectorYN with '{self._model_path.name}'.",
                 hint="Verify that the ONNX model architecture matches YuNet specifications.",
             )
+        self._current_input_size: Optional[Tuple[int, int]] = (320, 320)
 
     @property
     def name(self) -> str:
@@ -145,6 +146,9 @@ class YuNetBackend(BaseFaceBackend):
 
     def detect(self, bgr_image: np.ndarray) -> List[FaceDetection]:
         height, width = bgr_image.shape[:2]
-        self._detector.setInputSize((width, height))
+        target_size = (width, height)
+        if self._current_input_size != target_size:
+            self._detector.setInputSize(target_size)
+            self._current_input_size = target_size
         _, raw_faces = self._detector.detect(bgr_image)
         return _parse_yunet_detections(raw_faces)
