@@ -23,16 +23,16 @@ def mock_cv2_camera():
         patch("cv2.VideoCapture") as mock_cap_cls,
         patch("cv2.imshow") as mock_imshow,
         patch("cv2.waitKey") as mock_wait_key,
-        patch("cv2.destroyAllWindows") as mock_destroy,
+        patch("cv2.destroyWindow") as mock_destroy_window,
     ):
         mock_cap = MagicMock()
         mock_cap_cls.return_value = mock_cap
-        yield mock_cap, mock_imshow, mock_wait_key, mock_destroy
+        yield mock_cap, mock_imshow, mock_wait_key, mock_destroy_window
 
 
 def test_unavailable_camera_raises_camera_not_found(mock_cv2_camera) -> None:
     """Verify CameraNotFoundError is raised and resources are cleaned up when camera cannot be opened."""
-    mock_cap, _, _, mock_destroy = mock_cv2_camera
+    mock_cap, _, _, mock_destroy_window = mock_cv2_camera
     mock_cap.isOpened.return_value = False
 
     with pytest.raises(CameraNotFoundError) as exc_info:
@@ -41,12 +41,12 @@ def test_unavailable_camera_raises_camera_not_found(mock_cv2_camera) -> None:
     assert "Could not open camera device with index 99" in str(exc_info.value)
     assert exc_info.value.hint is not None
     mock_cap.release.assert_called_once()
-    mock_destroy.assert_called_once()
+    mock_destroy_window.assert_called_once()
 
 
 def test_failed_frame_read_raises_camera_read_error(mock_cv2_camera) -> None:
     """Verify CameraReadError is raised and cleanup occurs when reading a frame fails."""
-    mock_cap, _, _, mock_destroy = mock_cv2_camera
+    mock_cap, _, _, mock_destroy_window = mock_cv2_camera
     mock_cap.isOpened.return_value = True
     mock_cap.read.return_value = (False, None)
 
@@ -56,12 +56,12 @@ def test_failed_frame_read_raises_camera_read_error(mock_cv2_camera) -> None:
     assert "Failed to read video frame" in str(exc_info.value)
     assert exc_info.value.hint is not None
     mock_cap.release.assert_called_once()
-    mock_destroy.assert_called_once()
+    mock_destroy_window.assert_called_once()
 
 
 def test_cleanup_occurs_on_normal_exit_q_key(mock_cv2_camera) -> None:
     """Verify clean exit when 'q' key is pressed."""
-    mock_cap, mock_imshow, mock_wait_key, mock_destroy = mock_cv2_camera
+    mock_cap, mock_imshow, mock_wait_key, mock_destroy_window = mock_cv2_camera
     mock_cap.isOpened.return_value = True
 
     dummy_frame = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -75,13 +75,13 @@ def test_cleanup_occurs_on_normal_exit_q_key(mock_cv2_camera) -> None:
     camera(camera_index=0, detector=mock_detector)
 
     mock_cap.release.assert_called_once()
-    mock_destroy.assert_called_once()
+    mock_destroy_window.assert_called_once()
     mock_imshow.assert_called_once()
 
 
 def test_cleanup_occurs_on_normal_exit_escape_key(mock_cv2_camera) -> None:
     """Verify clean exit when Escape (27) is pressed."""
-    mock_cap, _, mock_wait_key, mock_destroy = mock_cv2_camera
+    mock_cap, _, mock_wait_key, mock_destroy_window = mock_cv2_camera
     mock_cap.isOpened.return_value = True
 
     dummy_frame = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -94,12 +94,12 @@ def test_cleanup_occurs_on_normal_exit_escape_key(mock_cv2_camera) -> None:
     camera(camera_index=0, detector=mock_detector)
 
     mock_cap.release.assert_called_once()
-    mock_destroy.assert_called_once()
+    mock_destroy_window.assert_called_once()
 
 
 def test_cleanup_occurs_on_unexpected_exception(mock_cv2_camera) -> None:
     """Verify resources are guaranteed to be released even if an unexpected exception occurs inside the loop."""
-    mock_cap, _, _, mock_destroy = mock_cv2_camera
+    mock_cap, _, _, mock_destroy_window = mock_cv2_camera
     mock_cap.isOpened.return_value = True
 
     dummy_frame = np.zeros((100, 100, 3), dtype=np.uint8)
@@ -113,7 +113,7 @@ def test_cleanup_occurs_on_unexpected_exception(mock_cv2_camera) -> None:
 
     assert "Simulated unexpected detector crash" in str(exc_info.value)
     mock_cap.release.assert_called_once()
-    mock_destroy.assert_called_once()
+    mock_destroy_window.assert_called_once()
 
 
 def test_camera_draws_box_on_detection(mock_cv2_camera) -> None:

@@ -184,7 +184,7 @@ def draw_text_badge(
 
     # Clamp position within image
     x = max(padding, min(x, img_w - tw - padding))
-    y = max(th + padding, min(y, img_h - padding))
+    y = max(th + padding, min(y, img_h - baseline - padding))
 
     # Background rectangle
     cv2.rectangle(
