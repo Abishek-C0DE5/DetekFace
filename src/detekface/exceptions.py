@@ -66,6 +66,11 @@ class ConfigurationError(DetekFaceError):
     pass
 
 
+class InvalidSettingError(ConfigurationError):
+    """Raised when an invalid overlay shape, color, or configuration setting is provided."""
+    pass
+
+
 class CameraError(DetekFaceError):
     """Base exception for camera capture and video streaming errors."""
     pass

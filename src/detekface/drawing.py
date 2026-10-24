@@ -10,7 +10,7 @@ from typing import Deque, Dict, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
-from detekface.exceptions import ConfigurationError
+from detekface.exceptions import ConfigurationError, InvalidSettingError
 from detekface.types import FaceDetection
 
 # Documented named color mapping (RGB values)
@@ -89,11 +89,11 @@ def parse_color_to_bgr(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, in
         A tuple of (B, G, R) integer values in [0, 255] for OpenCV.
 
     Raises:
-        ConfigurationError: If the color format or name is not recognized.
+        InvalidSettingError: If the color format or name is not recognized.
     """
     if isinstance(color, (tuple, list)):
         if len(color) != 3 or not all(isinstance(v, int) and 0 <= v <= 255 for v in color):
-            raise ConfigurationError(
+            raise InvalidSettingError(
                 message=f"Color tuple must contain 3 integers in range 0-255, got: {color}.",
                 hint="Provide a tuple like (0, 255, 136) or a hex string like '#00FF88'.",
             )
@@ -102,7 +102,7 @@ def parse_color_to_bgr(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, in
         return (int(b), int(g), int(r))
 
     if not isinstance(color, str):
-        raise ConfigurationError(
+        raise InvalidSettingError(
             message=f"Invalid color type '{type(color).__name__}'.",
             hint="Provide a hex string (e.g. '#00FF88') or a color name.",
         )
@@ -127,12 +127,12 @@ def parse_color_to_bgr(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, in
             b = int(hex_str[4:6], 16)
             return (b, g, r)
         except ValueError as e:
-            raise ConfigurationError(
+            raise InvalidSettingError(
                 message=f"Invalid hex color string: '{color}'.",
                 hint="Hex string must contain valid hexadecimal characters (0-9, A-F).",
             ) from e
 
-    raise ConfigurationError(
+    raise InvalidSettingError(
         message=f"Unrecognized color specification: '{color}'.",
         hint=(
             f"Available color names: {sorted(NAMED_COLORS.keys())}\n"
@@ -144,20 +144,20 @@ def parse_color_to_bgr(color: Union[str, Tuple[int, int, int]]) -> Tuple[int, in
 def validate_render_parameters(shape: str, thickness: int) -> Tuple[str, int]:
     """Validate shape name and thickness value."""
     if not isinstance(shape, str):
-        raise ConfigurationError(
+        raise InvalidSettingError(
             message=f"Shape must be a string, got {type(shape).__name__}.",
             hint=f"Supported shapes are: {sorted(SUPPORTED_SHAPES)}.",
         )
 
     clean_shape = shape.strip().lower()
     if clean_shape not in SUPPORTED_SHAPES:
-        raise ConfigurationError(
+        raise InvalidSettingError(
             message=f"Unsupported overlay shape: '{shape}'.",
             hint=f"Supported shapes are: {sorted(SUPPORTED_SHAPES)}.",
         )
 
     if not isinstance(thickness, int) or isinstance(thickness, bool) or thickness < 1:
-        raise ConfigurationError(
+        raise InvalidSettingError(
             message=f"Thickness must be an integer >= 1, got: {thickness}.",
             hint="Use an integer such as 1, 2, 3, or 4.",
         )

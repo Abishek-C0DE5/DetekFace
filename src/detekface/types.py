@@ -11,6 +11,68 @@ from detekface.exceptions import DetekFaceError, ImageSaveError, InvalidImageErr
 SUPPORTED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"}
 
 
+def _validate_and_prepare_save_path(path: Union[str, Path]) -> Path:
+    """Validate image save path and create parent directories if necessary."""
+    if path is None or not isinstance(path, (str, Path)) or not str(path).strip():
+        raise InvalidImageError(
+            message=f"Invalid save path: {path!r}.",
+            hint="Provide a valid filepath string or Path with a supported image extension.",
+        )
+
+    target_path = Path(path).expanduser()
+    ext = target_path.suffix.lower()
+
+    if not ext:
+        raise InvalidImageError(
+            message=f"Save path '{target_path}' has no file extension.",
+            hint=f"Provide a file extension such as: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
+        )
+
+    if ext not in SUPPORTED_IMAGE_EXTENSIONS:
+        raise InvalidImageError(
+            message=f"Unsupported image file format '{ext}' in path: '{target_path}'.",
+            hint=f"Supported formats are: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
+        )
+
+    parent_dir = target_path.parent
+    if not parent_dir.exists():
+        try:
+            parent_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            raise ImageSaveError(
+                message=f"Could not create parent directory for save path: '{parent_dir}'.",
+                hint=str(e),
+            ) from e
+    elif not parent_dir.is_dir():
+        raise ImageSaveError(
+            message=f"Parent path of save target is a file, not a directory: '{parent_dir}'.",
+            hint="Specify a destination path inside a valid directory.",
+        )
+
+    return target_path.resolve()
+
+
+@dataclass(frozen=True)
+class Point:
+    """A 2D coordinate representing a key point in image pixel space.
+
+    Attributes:
+        x: Horizontal pixel coordinate.
+        y: Vertical pixel coordinate.
+    """
+
+    x: int
+    y: int
+
+    def as_tuple(self) -> Tuple[int, int]:
+        """Return (x, y) tuple."""
+        return (self.x, self.y)
+
+    def as_int_tuple(self) -> Tuple[int, int]:
+        """Return (x, y) rounded integer tuple."""
+        return (int(round(self.x)), int(round(self.y)))
+
+
 @dataclass(frozen=True)
 class BoundingBox:
     """Bounding box coordinates of a detected face in image pixel space.
@@ -52,6 +114,11 @@ class BoundingBox:
         """Area of the bounding box in square pixels."""
         return max(0, self.width) * max(0, self.height)
 
+    @property
+    def center(self) -> Point:
+        """Center coordinate of the bounding box."""
+        return Point(x=self.x + self.width // 2, y=self.y + self.height // 2)
+
     def as_tuple(self) -> Tuple[int, int, int, int]:
         """Return (x, y, width, height) format."""
         return (self.x, self.y, self.width, self.height)
@@ -74,18 +141,6 @@ class BoundingBox:
 
 
 @dataclass(frozen=True)
-class Point:
-    """A 2D coordinate representing a key point in image pixel space."""
-
-    x: int
-    y: int
-
-    def as_tuple(self) -> Tuple[int, int]:
-        """Return (x, y) tuple."""
-        return (self.x, self.y)
-
-
-@dataclass(frozen=True)
 class FaceLandmarks:
     """The 5 key facial landmarks detected by YuNet.
 
@@ -102,6 +157,16 @@ class FaceLandmarks:
     nose_tip: Point
     right_mouth: Point
     left_mouth: Point
+
+    @property
+    def mouth_left(self) -> Point:
+        """Alias for left_mouth (subject's left, viewer's right)."""
+        return self.left_mouth
+
+    @property
+    def mouth_right(self) -> Point:
+        """Alias for right_mouth (subject's right, viewer's left)."""
+        return self.right_mouth
 
     def as_list(self) -> List[Point]:
         """Return landmarks as a list in canonical order."""
@@ -377,41 +442,7 @@ class DetectionResult:
             InvalidImageError: If the path is empty, invalid, or has an unsupported extension.
             ImageSaveError: If the directory cannot be created or saving the file fails.
         """
-        if path is None or not isinstance(path, (str, Path)) or not str(path).strip():
-            raise InvalidImageError(
-                message=f"Invalid save path: {path!r}.",
-                hint="Provide a valid filepath string or Path with a supported image extension.",
-            )
-
-        target_path = Path(path).expanduser()
-        ext = target_path.suffix.lower()
-
-        if not ext:
-            raise InvalidImageError(
-                message=f"Save path '{target_path}' has no file extension.",
-                hint=f"Provide a file extension such as: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
-            )
-
-        if ext not in SUPPORTED_IMAGE_EXTENSIONS:
-            raise InvalidImageError(
-                message=f"Unsupported image file format '{ext}' in path: '{target_path}'.",
-                hint=f"Supported formats are: {', '.join(sorted(SUPPORTED_IMAGE_EXTENSIONS))}.",
-            )
-
-        parent_dir = target_path.parent
-        if not parent_dir.exists():
-            try:
-                parent_dir.mkdir(parents=True, exist_ok=True)
-            except OSError as e:
-                raise ImageSaveError(
-                    message=f"Could not create parent directory for save path: '{parent_dir}'.",
-                    hint=str(e),
-                ) from e
-        elif not parent_dir.is_dir():
-            raise ImageSaveError(
-                message=f"Parent path of save target is a file, not a directory: '{parent_dir}'.",
-                hint="Specify a destination path inside a valid directory.",
-            )
+        resolved_path = _validate_and_prepare_save_path(path)
 
         annotated_frame = self.annotate(
             shape=shape,
@@ -420,7 +451,6 @@ class DetectionResult:
             show_confidence=show_confidence,
         )
 
-        resolved_path = target_path.resolve()
         try:
             success = cv2.imwrite(str(resolved_path), annotated_frame)
             if not success:
@@ -511,6 +541,88 @@ class FaceCapture:
         if not isinstance(self.image, np.ndarray) or self.image.size == 0:
             return np.empty((0, 0, 3), dtype=np.uint8)
         return cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB)
+
+    def save(self, path: Union[str, Path]) -> Path:
+        """Save the cropped face image to disk.
+
+        Args:
+            path: Target file path (str or Path) with a supported image extension.
+
+        Returns:
+            The resolved Path to the saved face image file.
+
+        Raises:
+            InvalidImageError: If the path is empty, invalid, or has an unsupported extension.
+            ImageSaveError: If the directory cannot be created or saving the file fails.
+        """
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            raise InvalidImageError(
+                message="FaceCapture does not contain a valid image array to save.",
+                hint="Verify that the captured face contains valid image data.",
+            )
+
+        resolved_path = _validate_and_prepare_save_path(path)
+        try:
+            success = cv2.imwrite(str(resolved_path), self.image)
+            if not success:
+                raise ImageSaveError(
+                    message=f"OpenCV failed to write face crop to disk at: '{resolved_path}'.",
+                    hint="Verify directory write permissions and available disk space.",
+                )
+        except cv2.error as e:
+            raise ImageSaveError(
+                message=f"OpenCV encountered an error while writing face crop: '{resolved_path}'.",
+                hint=str(e),
+            ) from e
+
+        self.path = resolved_path
+        return resolved_path
+
+    def show(self, title: str = "Captured Face", delay: int = 0) -> int:
+        """Display the cropped face image in an OpenCV GUI window until closed or dismissed.
+
+        Args:
+            title: Title string of the GUI display window.
+            delay: Milliseconds to wait before closing (if > 0). Default is 0 (waits indefinitely).
+
+        Returns:
+            The integer keycode of the pressed key, or -1 if the window was closed.
+        """
+        if not isinstance(self.image, np.ndarray) or self.image.size == 0:
+            raise InvalidImageError(
+                message="FaceCapture does not contain a valid image array to display.",
+                hint="Verify that the captured face contains valid image data.",
+            )
+
+        try:
+            cv2.namedWindow(title, cv2.WINDOW_AUTOSIZE)
+            cv2.imshow(title, self.image)
+        except cv2.error as e:
+            raise DetekFaceError(
+                message=f"Failed to display GUI window '{title}'.",
+                hint="Ensure an active graphical display environment is available.",
+            ) from e
+
+        try:
+            if delay > 0:
+                raw_key = cv2.waitKey(delay)
+                return (raw_key & 0xFF) if raw_key != -1 else -1
+
+            while True:
+                raw_key = cv2.waitKey(50)
+                if raw_key != -1:
+                    return raw_key & 0xFF
+                try:
+                    prop = cv2.getWindowProperty(title, cv2.WND_PROP_VISIBLE)
+                    if prop < 1:
+                        return -1
+                except cv2.error:
+                    return -1
+        finally:
+            try:
+                cv2.destroyWindow(title)
+            except cv2.error:
+                pass
 
     def __repr__(self) -> str:
         saved_info = f", saved to '{self.path}'" if self.path else ""
