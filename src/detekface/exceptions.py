@@ -71,6 +71,11 @@ class InvalidSettingError(ConfigurationError):
     pass
 
 
+class DependencyNotFoundError(DetekFaceError):
+    """Raised when an optional dependency required for a selected backend is not installed."""
+    pass
+
+
 class CameraError(DetekFaceError):
     """Base exception for camera capture and video streaming errors."""
     pass

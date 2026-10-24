@@ -346,7 +346,7 @@ def test_camera_resource_cleanup_on_exception():
     with (
         patch("cv2.VideoCapture", return_value=mock_cap),
         patch("cv2.imshow"),
-        patch("cv2.destroyAllWindows") as mock_destroy,
+        patch("cv2.destroyWindow") as mock_destroy,
     ):
         with pytest.raises(ZeroDivisionError):
             camera(camera_index=0, detector=mock_detector)

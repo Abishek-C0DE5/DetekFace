@@ -56,6 +56,7 @@ def camera(
     confidence_threshold: float = 0.7,
     detector: Optional[FaceDetector] = None,
     window_name: str = "DetekFace - Live Webcam",
+    backend: str = "yunet",
 ) -> None:
     ...
 ```
@@ -76,6 +77,7 @@ Opens a live webcam feed, runs real-time face detection on each frame, draws cus
 - **`confidence_threshold`** (`float`, default: `0.7`): Minimum confidence threshold for detection.
 - **`detector`** (`Optional[FaceDetector]`, default: `None`): Existing detector instance to reuse.
 - **`window_name`** (`str`, default: `"DetekFace - Live Webcam"`): Title of the OpenCV display window.
+- **`backend`** (`str`, default: `"yunet"`): Detection backend (`"yunet"` or `"mediapipe"`).
 
 #### Keyboard Controls
 - **`Q`** or **`Escape`**: Quit and close the camera preview.
@@ -85,6 +87,7 @@ Opens a live webcam feed, runs real-time face detection on each frame, draws cus
 - `CameraNotFoundError`: Camera index cannot be opened or device is not found.
 - `CameraReadError`: Camera opened but failed to read initial video frames.
 - `ConfigurationError`: Invalid style name, color definition, or non-positive thickness.
+- `DependencyNotFoundError`: Selected optional backend (e.g. MediaPipe) is not installed.
 
 ---
 
@@ -98,6 +101,7 @@ def detect(
     top_k: int = 5000,
     model: Optional[Union[str, Path]] = None,
     cache_dir: Optional[Union[str, Path]] = None,
+    backend: str = "yunet",
 ) -> DetectionResult:
     ...
 ```
@@ -111,6 +115,7 @@ Detects human faces in a still image or raw NumPy BGR array.
 - **`top_k`** (`int`, default: `5000`): Maximum candidate face proposals evaluated before NMS.
 - **`model`** (`Optional[Union[str, Path]]`, default: `None`): Model identifier or path to custom `.onnx` model.
 - **`cache_dir`** (`Optional[Union[str, Path]]`, default: `None`): Custom directory for caching model weights.
+- **`backend`** (`str`, default: `"yunet"`): Detection backend (`"yunet"` or `"mediapipe"`).
 
 #### Returns
 - `DetectionResult`: Dataclass containing detected faces and the unannotated original BGR image.
@@ -172,6 +177,7 @@ def video(
     confidence_threshold: float = 0.7,
     detector: Optional[FaceDetector] = None,
     window_name: str = "DetekFace - Video File",
+    backend: str = "yunet",
 ) -> int:
     ...
 ```
@@ -191,6 +197,7 @@ Processes a prerecorded video file frame-by-frame, rendering detection overlays 
 - **`confidence_threshold`** (`float`, default: `0.7`): Detection threshold.
 - **`detector`** (`Optional[FaceDetector]`, default: `None`): Reusable detector instance.
 - **`window_name`** (`str`, default: `"DetekFace - Video File"`): Title for display window.
+- **`backend`** (`str`, default: `"yunet"`): Detection backend (`"yunet"` or `"mediapipe"`).
 
 #### Returns
 - `int`: Total number of frames successfully processed.
@@ -199,6 +206,7 @@ Processes a prerecorded video file frame-by-frame, rendering detection overlays 
 - `VideoNotFoundError`: Video file does not exist.
 - `InvalidVideoError`: Unsupported video format or damaged file.
 - `VideoWriteError`: Failure to initialize output video writer or write frames.
+- `DependencyNotFoundError`: Selected optional backend (e.g. MediaPipe) is not installed.
 
 ---
 
@@ -206,7 +214,7 @@ Processes a prerecorded video file frame-by-frame, rendering detection overlays 
 
 ### `FaceDetector`
 
-Core detection engine wrapping OpenCV's YuNet ONNX inference implementation.
+Detection engine supporting interchangeable backends (`"yunet"` default, `"mediapipe"` optional).
 
 ```python
 class FaceDetector:
@@ -217,7 +225,14 @@ class FaceDetector:
         nms_threshold: float = 0.3,
         top_k: int = 5000,
         cache_dir: Optional[Union[str, Path]] = None,
+        backend: str = "yunet",
     ) -> None: ...
+
+    @property
+    def backend_name(self) -> str: ...
+
+    @property
+    def backend(self) -> BaseFaceBackend: ...
 
     def detect(self, image: Union[str, Path, np.ndarray]) -> DetectionResult: ...
     def detect_frame(self, frame: np.ndarray) -> List[FaceDetection]: ...
@@ -321,7 +336,7 @@ class Point:
 
 ### `FaceLandmarks`
 
-Five canonical facial feature landmarks.
+Facial feature landmarks normalized across backends. Landmarks not supplied by a specific backend remain `None` (never artificially invented).
 
 ```python
 @dataclass
@@ -329,11 +344,28 @@ class FaceLandmarks:
     left_eye: Point
     right_eye: Point
     nose_tip: Point
-    mouth_left: Point
-    mouth_right: Point
+    mouth_left: Optional[Point] = None      # Provided by YuNet; None for MediaPipe
+    mouth_right: Optional[Point] = None     # Provided by YuNet; None for MediaPipe
+    mouth_center: Optional[Point] = None    # Provided by MediaPipe; None for YuNet
+    right_ear: Optional[Point] = None       # Provided by MediaPipe; None for YuNet
+    left_ear: Optional[Point] = None        # Provided by MediaPipe; None for YuNet
 
     def as_list(self) -> List[Point]: ...
+    def as_tuples(self) -> List[Tuple[float, float]]: ...
 ```
+
+#### Landmark Supply by Backend
+
+| Landmark | YuNet (Default) | MediaPipe (Optional) | Description |
+| :--- | :---: | :---: | :--- |
+| `right_eye` | Yes | Yes | Center of subject's right eye |
+| `left_eye` | Yes | Yes | Center of subject's left eye |
+| `nose_tip` | Yes | Yes | Apex / tip of nose |
+| `right_mouth` / `mouth_right` | Yes | No (`None`) | Right corner of mouth |
+| `left_mouth` / `mouth_left` | Yes | No (`None`) | Left corner of mouth |
+| `mouth_center` | No (`None`) | Yes | Center point between lips |
+| `right_ear` | No (`None`) | Yes | Right ear tragion |
+| `left_ear` | No (`None`) | Yes | Left ear tragion |
 
 ---
 
@@ -378,6 +410,19 @@ class FPSCounter:
 
 ---
 
+## Detection Backends & Adapters
+
+`detekface` decouples the detection engine behind a clean adapter interface (`BaseFaceBackend`).
+
+- **`BaseFaceBackend`**: Abstract base class for all backend adapters.
+- **`YuNetBackend`**: Default OpenCV `FaceDetectorYN` adapter (zero extra dependencies).
+- **`MediaPipeBackend`**: Optional Google MediaPipe BlazeFace adapter (`pip install "detekface[mediapipe]"`).
+- **`get_backend(name, confidence_threshold, ...)`**: Factory function instantiating backend adapters.
+- **`SUPPORTED_BACKENDS`**: `("yunet", "mediapipe")`
+- **`DEFAULT_BACKEND`**: `"yunet"`
+
+---
+
 ## Drawing & Utility Functions
 
 - **`draw_faces(image, faces, shape, color, thickness, show_confidence)`**: Draws overlays on an image array.
@@ -392,7 +437,8 @@ class FPSCounter:
 
 ## Model Management
 
-- **`resolve_model(model_name_or_path, cache_dir)`**: Resolves model name or local path, downloading and caching official weights if needed.
+- **`resolve_model(model_name_or_path, cache_dir)`**: Resolves YuNet model name or local path, downloading and caching official weights if needed.
+- **`resolve_mediapipe_model(model_name_or_path, cache_dir)`**: Resolves MediaPipe BlazeFace model weights.
 - **`get_cache_dir()`**: Returns path to the local cache directory (`%LOCALAPPDATA%\detekface` on Windows).
 - **`ModelMetadata`**: Dataclass with model name, filename, sha256 checksum, and download URL.
 
@@ -400,6 +446,8 @@ class FPSCounter:
 
 ## Constants
 
+- **`SUPPORTED_BACKENDS`**: `("yunet", "mediapipe")`
+- **`DEFAULT_BACKEND`**: `"yunet"`
 - **`SUPPORTED_SHAPES`**: `{"rectangle", "corners", "circle", "rounded", "hud"}`
 - **`NAMED_COLORS`**: Dict mapping color names (`"green"`, `"neon_green"`, `"red"`, `"blue"`, `"cyan"`, etc.) to RGB tuples.
 - **`SUPPORTED_IMAGE_EXTENSIONS`**: `{".jpg", ".jpeg", ".png", ".webp", ".bmp"}`
@@ -414,6 +462,8 @@ All exceptions derive from `DetekFaceError` and include actionable `.message` an
 ```
 DetekFaceError (Base)
 ├── ConfigurationError
+│   └── InvalidSettingError
+├── DependencyNotFoundError (raised when an optional backend extra is not installed)
 ├── ModelError
 │   ├── ModelNotFoundError
 │   ├── ModelDownloadError

@@ -45,6 +45,7 @@ def video(
     codec: Optional[str] = None,
     source: Optional[Union[str, Path]] = None,
     output: Optional[Union[str, Path]] = None,
+    backend: str = "yunet",
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -186,7 +187,7 @@ def video(
                 fourcc_code = "mp4v"
 
     if detector is None:
-        detector = FaceDetector(confidence_threshold=confidence_threshold)
+        detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
 
     cap = cv2.VideoCapture(str(file_path))
     writer: Optional[cv2.VideoWriter] = None

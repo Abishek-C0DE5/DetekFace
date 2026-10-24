@@ -142,44 +142,61 @@ class BoundingBox:
 
 @dataclass(frozen=True)
 class FaceLandmarks:
-    """The 5 key facial landmarks detected by YuNet.
+    """Facial keypoints detected by face detection backends.
+
+    Supplied landmarks by backend:
+        - YuNet: right_eye, left_eye, nose_tip, right_mouth, left_mouth.
+        - MediaPipe: right_eye, left_eye, nose_tip, mouth_center, right_ear, left_ear.
+
+    Landmarks not provided by a given backend remain None. Missing landmarks are
+    never fabricated or interpolated.
 
     Attributes:
         right_eye: Center coordinates of the subject's right eye (viewer's left).
         left_eye: Center coordinates of the subject's left eye (viewer's right).
         nose_tip: Coordinates of the nose tip.
-        right_mouth: Coordinates of the subject's right mouth corner.
-        left_mouth: Coordinates of the subject's left mouth corner.
+        right_mouth: Coordinates of the subject's right mouth corner (YuNet).
+        left_mouth: Coordinates of the subject's left mouth corner (YuNet).
+        mouth_center: Coordinates of the mouth center (MediaPipe).
+        right_ear: Coordinates of the subject's right ear tragion (MediaPipe).
+        left_ear: Coordinates of the subject's left ear tragion (MediaPipe).
     """
 
-    right_eye: Point
-    left_eye: Point
-    nose_tip: Point
-    right_mouth: Point
-    left_mouth: Point
+    right_eye: Optional[Point] = None
+    left_eye: Optional[Point] = None
+    nose_tip: Optional[Point] = None
+    right_mouth: Optional[Point] = None
+    left_mouth: Optional[Point] = None
+    mouth_center: Optional[Point] = None
+    right_ear: Optional[Point] = None
+    left_ear: Optional[Point] = None
 
     @property
-    def mouth_left(self) -> Point:
+    def mouth_left(self) -> Optional[Point]:
         """Alias for left_mouth (subject's left, viewer's right)."""
         return self.left_mouth
 
     @property
-    def mouth_right(self) -> Point:
+    def mouth_right(self) -> Optional[Point]:
         """Alias for right_mouth (subject's right, viewer's left)."""
         return self.right_mouth
 
     def as_list(self) -> List[Point]:
-        """Return landmarks as a list in canonical order."""
-        return [
+        """Return all available (non-None) landmarks as a list in canonical order."""
+        ordered = [
             self.right_eye,
             self.left_eye,
             self.nose_tip,
             self.right_mouth,
             self.left_mouth,
+            self.mouth_center,
+            self.right_ear,
+            self.left_ear,
         ]
+        return [p for p in ordered if p is not None]
 
     def as_tuples(self) -> List[Tuple[int, int]]:
-        """Return landmarks as a list of (x, y) integer tuples."""
+        """Return all available (non-None) landmarks as a list of (x, y) integer tuples."""
         return [p.as_tuple() for p in self.as_list()]
 
 

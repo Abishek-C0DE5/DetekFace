@@ -69,6 +69,22 @@ OFFICIAL_MODELS: Dict[str, ModelMetadata] = {
     ),
 }
 
+MEDIAPIPE_MODELS: Dict[str, ModelMetadata] = {
+    "blazeface_short_range": ModelMetadata(
+        name="blazeface_short_range",
+        filename="blaze_face_short_range.tflite",
+        sha256="b4578f35940bf5a1a655214a1cce5cab13eba73c1297cd78e1a04c2380b0152f",
+        size_bytes=229746,
+        min_opencv_version="4.5.0",
+        license="Apache-2.0",
+        author="Google MediaPipe Authors",
+        description="MediaPipe BlazeFace short-range face detection model in TFLite format.",
+        urls=(
+            "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+        ),
+    ),
+}
+
 # Alias mapping for user convenience
 MODEL_ALIASES: Dict[str, str] = {
     "yunet": "default",
@@ -228,7 +244,7 @@ def resolve_model(
         str_name = str(model_name_or_path).strip()
         is_path_like = (
             any(sep in str_name for sep in ("/", "\\"))
-            or str_name.endswith(".onnx")
+            or str_name.endswith((".onnx", ".tflite"))
             or candidate_path.exists()
         )
         normalized_key = str_name.lower()
@@ -308,3 +324,40 @@ def verify_model_initialization(
                 "(yunet_2026may.onnx), while OpenCV 4.x uses fixed-shape models (yunet_2023mar.onnx)."
             ),
         ) from e
+
+
+def resolve_mediapipe_model(
+    model: Optional[Union[str, Path]] = None,
+    cache_dir: Optional[Union[str, Path]] = None,
+    force_download: bool = False,
+    verify_checksum: bool = True,
+) -> Path:
+    """Resolve a valid local MediaPipe BlazeFace model file path."""
+    if model is not None:
+        p = Path(model).expanduser()
+        if p.is_file():
+            if p.stat().st_size == 0:
+                raise ModelCorruptionError(f"Model file '{p}' is empty (0 bytes).")
+            return p.resolve()
+
+    metadata = MEDIAPIPE_MODELS["blazeface_short_range"]
+    base_cache = Path(cache_dir).expanduser().resolve() if cache_dir else get_cache_dir()
+    base_cache.mkdir(parents=True, exist_ok=True)
+    destination = base_cache / metadata.filename
+
+    if destination.is_file() and not force_download:
+        if destination.stat().st_size == 0:
+            destination.unlink(missing_ok=True)
+        elif verify_checksum:
+            current_sha256 = compute_file_sha256(destination)
+            if current_sha256.lower() != metadata.sha256.lower():
+                destination.unlink(missing_ok=True)
+                raise ModelCorruptionError(
+                    message=f"Cached model '{metadata.filename}' failed integrity validation.",
+                    hint="The corrupt cached file has been purged. Please rerun to download a fresh copy.",
+                )
+            return destination
+        else:
+            return destination
+
+    return download_model(metadata, destination)

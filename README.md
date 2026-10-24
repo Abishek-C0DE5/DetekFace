@@ -26,6 +26,12 @@ DetekFace is officially published on PyPI. Install it in seconds:
 pip install detekface
 ```
 
+To enable the optional MediaPipe backend:
+
+```bash
+pip install "detekface[mediapipe]"
+```
+
 > **Zero configuration needed**: YuNet ONNX neural weights are automatically downloaded from trusted OpenCV mirrors, verified with SHA256 checksums, and cached locally on first run.
 
 ---
@@ -51,12 +57,13 @@ pip install detekface
 ## 2. Implemented Features
 
 - 📹 **2-Line Live Webcam**: Start a real-time face detection camera stream with `detekface.camera()`.
-- 🖼️ **Still-Image Face Detection**: Inspect faces, bounding boxes, confidence scores, and 5 facial landmarks using `detekface.detect()`.
+- 🔌 **Multiple Backends**: Seamlessly switch between built-in YuNet (`backend="yunet"`) and optional Google MediaPipe (`backend="mediapipe"`).
+- 🖼️ **Still-Image Face Detection**: Inspect faces, bounding boxes, confidence scores, and facial landmarks using `detekface.detect()`.
 - ✂️ **Pristine Face Cropping**: Extract clean, unpolluted face crops programmatically or with the <kbd>C</kbd> key. Drawn overlays never contaminate saved crops.
 - 🎨 **5 Distinct Overlay Styles**: Choose between tactical corner brackets, modern rounded boxes, classic rectangles, geometric circles, or a full sci-fi HUD.
 - 📊 **Real-Time Telemetry**: Display smoothed rolling-average FPS, detected face count badges, and confidence percentage tags.
 - 🎬 **Prerecorded Video Support**: Process video files frame-by-frame and export annotated clips with preserved resolution and framerate via `detekface.video()`.
-- 🔒 **Automatic Model Management**: Official YuNet ONNX models are automatically downloaded, SHA256-verified, and cached locally.
+- 🔒 **Automatic Model Management**: Official YuNet ONNX and MediaPipe TFLite models are automatically downloaded, SHA256-verified, and cached locally.
 - 💡 **Actionable Error Messages**: Exception hierarchy with clear, friendly `.hint` attributes for disconnected webcams, missing files, or corrupted data.
 
 ---
@@ -137,6 +144,8 @@ graph TD
 - **Core Dependencies**:
   - `numpy>=1.20`
   - `opencv-python>=4.8` *(standard GUI-capable wheel; do not use `opencv-python-headless` if preview windows are required)*.
+- **Optional Extras**:
+  - `mediapipe>=0.10.0`: Install via `pip install "detekface[mediapipe]"` to enable Google's BlazeFace backend.
 
 ---
 

@@ -39,6 +39,7 @@ def camera(
     on_capture: Optional[Callable[[FaceCapture], None]] = None,
     window_title: str = "detekface - Live Face Detection",
     max_frames: Optional[int] = None,
+    backend: str = "yunet",
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -62,6 +63,7 @@ def camera(
         on_capture: Optional callback function invoked with the FaceCapture object when 'C' is pressed.
         window_title: Window title for the OpenCV preview window.
         max_frames: Optional maximum number of frames to process before closing (useful for automated testing).
+        backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
 
     Raises:
         ConfigurationError: If shape, color, thickness, or display flags are invalid.
@@ -88,7 +90,7 @@ def camera(
         )
 
     if detector is None:
-        detector = FaceDetector(confidence_threshold=confidence_threshold)
+        detector = FaceDetector(backend=backend, confidence_threshold=confidence_threshold)
 
     cap = cv2.VideoCapture(camera_index)
     frames_processed = 0

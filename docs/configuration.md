@@ -131,7 +131,72 @@ detector = FaceDetector(
 | :--- | :--- | :--- | :--- |
 | `confidence_threshold` | `0.7` | `0.5` – `0.85` | **Precision vs Recall**. Lower values (e.g., `0.55`) help detect small, distant, or dimly lit faces. Higher values (e.g., `0.85`) eliminate spurious false detections. |
 | `nms_threshold` | `0.3` | `0.2` – `0.4` | **Overlap suppression**. Governs how aggressively multiple overlapping boxes on the same face are merged. |
-| `top_k` | `5000` | `1000` – `5000` | Limits initial region proposals generated across feature map pyramids. |
+---
+
+## Detection Backends (`backend`)
+
+`detekface` supports multiple detection engines via an adapter architecture.
+
+### Supported Backends
+
+| Backend | Flag | Dependency | License | Default | Facial Keypoints |
+| :--- | :--- | :--- | :--- | :---: | :--- |
+| **YuNet** | `backend="yunet"` | Built-in (`opencv-python`) | MIT / Apache 2.0 | **Yes** | 5 points: right eye, left eye, nose tip, right mouth, left mouth |
+| **MediaPipe** | `backend="mediapipe"` | Optional (`pip install "detekface[mediapipe]"`) | Apache 2.0 | No | 6 points: right eye, left eye, nose tip, mouth center, right ear, left ear |
+
+### Using YuNet (Default)
+
+YuNet requires no extra dependencies beyond `detekface`:
+
+```python
+import detekface
+
+# Both of these use YuNet by default:
+detekface.camera()
+result = detekface.detect("photo.jpg", backend="yunet")
+```
+
+### Using MediaPipe (Optional)
+
+To use Google's MediaPipe BlazeFace short-range detector:
+
+1. Install the optional dependency extra:
+   ```bash
+   pip install "detekface[mediapipe]"
+   ```
+
+2. Specify `backend="mediapipe"`:
+   ```python
+   import detekface
+
+   # Real-time camera with MediaPipe backend:
+   detekface.camera(backend="mediapipe")
+
+   # Still image detection:
+   result = detekface.detect("photo.jpg", backend="mediapipe")
+
+   # Prerecorded video processing:
+   detekface.video("clip.mp4", backend="mediapipe")
+   ```
+
+### Landmark Contracts: Never Invented
+
+Each backend normalizes its outputs into `detekface`'s standard `DetectionResult` and `FaceDetection` objects:
+
+- **YuNet** provides 5 landmarks: `right_eye`, `left_eye`, `nose_tip`, `right_mouth`, `left_mouth`. MediaPipe-specific landmarks (`mouth_center`, `right_ear`, `left_ear`) are `None`.
+- **MediaPipe** provides 6 landmarks: `right_eye`, `left_eye`, `nose_tip`, `mouth_center`, `right_ear`, `left_ear`. Because MediaPipe does not provide separate mouth corners, `right_mouth` and `left_mouth` are `None`.
+- **Integrity Guarantee**: `detekface` will **never** invent or hallucinate missing landmarks. Code accessing `face.landmarks.mouth_center` or `face.landmarks.mouth_left` should check for `None` or use the backend appropriate for their task.
+
+### Strict Error Handling: No Silent Fallbacks
+
+If `backend="mediapipe"` is requested but `mediapipe` is not installed, `detekface` raises `DependencyNotFoundError` with clear installation instructions:
+
+```
+detekface.exceptions.DependencyNotFoundError: The 'mediapipe' backend requires the optional 'mediapipe' package.
+Install it with: pip install "detekface[mediapipe]"
+```
+
+`detekface` **never silently falls back** to a different backend if the requested backend is unavailable or fails, ensuring deterministic behavior in production pipelines.
 
 ---
 

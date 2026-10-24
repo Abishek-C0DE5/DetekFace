@@ -152,9 +152,9 @@ def _parse_yunet_detections(raw_faces: Optional[np.ndarray]) -> List[FaceDetecti
 
 
 class FaceDetector:
-    """YuNet face detector wrapper with automatic model loading and input handling.
+    """Unified face detector wrapper with automatic model loading and input handling.
 
-    Provides high-level face detection with structured bounding boxes and facial landmarks.
+    Supports multiple detection backends (default 'yunet', optional 'mediapipe').
     """
 
     def __init__(
@@ -164,55 +164,63 @@ class FaceDetector:
         nms_threshold: float = 0.3,
         top_k: int = 5000,
         cache_dir: Optional[Union[str, Path]] = None,
+        backend: str = "yunet",
     ) -> None:
         """Initialize the FaceDetector.
 
         Args:
-            model: Optional model name, alias, or custom local .onnx path.
+            model: Optional model name, alias, or custom local model path.
             confidence_threshold: Minimum detection confidence score (0.0 to 1.0).
-            nms_threshold: Non-maximum suppression IoU threshold (0.0 to 1.0).
-            top_k: Maximum number of candidate faces to retain prior to NMS.
+            nms_threshold: Non-maximum suppression IoU threshold (0.0 to 1.0, YuNet only).
+            top_k: Maximum candidate faces to retain prior to NMS (YuNet only).
             cache_dir: Optional custom directory for caching models.
+            backend: Face detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
         """
+        from detekface.backends import get_backend
+
+        clean_backend = str(backend).strip().lower()
         _validate_threshold("confidence_threshold", confidence_threshold, 0.0, 1.0)
-        _validate_threshold("nms_threshold", nms_threshold, 0.0, 1.0)
-        if not isinstance(top_k, int) or top_k < 1:
-            raise ConfigurationError(
-                message=f"top_k must be a positive integer >= 1, got {top_k}.",
-                hint="Set top_k to a value like 5000.",
-            )
+        model_to_pass = model
+        if clean_backend == "yunet":
+            _validate_threshold("nms_threshold", nms_threshold, 0.0, 1.0)
+            if not isinstance(top_k, int) or top_k < 1:
+                raise ConfigurationError(
+                    message=f"top_k must be a positive integer >= 1, got {top_k}.",
+                    hint="Set top_k to a value like 5000.",
+                )
+            model_to_pass = resolve_model(model, cache_dir=cache_dir)
 
         self._confidence_threshold = float(confidence_threshold)
         self._nms_threshold = float(nms_threshold)
         self._top_k = int(top_k)
 
-        self._model_path = resolve_model(model, cache_dir=cache_dir)
+        self._backend = get_backend(
+            backend=backend,
+            model=model_to_pass,
+            confidence_threshold=confidence_threshold,
+            nms_threshold=nms_threshold,
+            top_k=top_k,
+            cache_dir=cache_dir,
+        )
 
-        try:
-            self._detector = cv2.FaceDetectorYN.create(
-                str(self._model_path),
-                "",
-                (320, 320),
-                score_threshold=self._confidence_threshold,
-                nms_threshold=self._nms_threshold,
-                top_k=self._top_k,
-            )
-        except cv2.error as e:
-            raise ModelCompatibilityError(
-                message=f"Failed to create OpenCV FaceDetectorYN with model: {self._model_path.name}",
-                hint=str(e),
-            ) from e
-
-        if self._detector is None:
-            raise ModelCompatibilityError(
-                message=f"OpenCV returned None when initializing FaceDetectorYN with '{self._model_path.name}'.",
-                hint="Verify that the ONNX model architecture matches YuNet specifications.",
-            )
+        # Expose underlying engine attributes for backward-compatibility with tests & internals
+        self._detector = getattr(self._backend, "_detector", None)
+        self._model_path = getattr(self._backend, "_model_path", None)
 
     @property
-    def model_path(self) -> Path:
-        """The resolved filesystem path of the active ONNX model."""
-        return self._model_path
+    def backend_name(self) -> str:
+        """Name of the active detection backend ('yunet' or 'mediapipe')."""
+        return self._backend.name
+
+    @property
+    def backend(self):
+        """Active detection backend adapter instance."""
+        return self._backend
+
+    @property
+    def model_path(self) -> Optional[Path]:
+        """The resolved filesystem path of the active model, or None if in-memory."""
+        return getattr(self._backend, "model_path", None)
 
     @property
     def confidence_threshold(self) -> float:
@@ -242,10 +250,5 @@ class FaceDetector:
                 hint="Ensure the image has non-zero width and height.",
             )
 
-        # Set input dimensions for inference
-        self._detector.setInputSize((width, height))
-
-        retval, raw_faces = self._detector.detect(bgr_image)
-        faces = _parse_yunet_detections(raw_faces)
-
+        faces = self._backend.detect(bgr_image)
         return DetectionResult(faces=faces, image=bgr_image)

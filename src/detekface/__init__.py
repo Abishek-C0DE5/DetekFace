@@ -30,6 +30,7 @@ from detekface.exceptions import (
     CaptureError,
     CaptureSaveError,
     ConfigurationError,
+    DependencyNotFoundError,
     DetekFaceError,
     ImageError,
     ImageNotFoundError,
@@ -47,6 +48,12 @@ from detekface.exceptions import (
     VideoError,
     VideoNotFoundError,
     VideoWriteError,
+)
+from detekface.backends import (
+    DEFAULT_BACKEND,
+    SUPPORTED_BACKENDS,
+    BaseFaceBackend,
+    get_backend,
 )
 from detekface.models import (
     OFFICIAL_MODELS,
@@ -78,21 +85,24 @@ def detect(
     top_k: int = 5000,
     model: Optional[Union[str, Path]] = None,
     cache_dir: Optional[Union[str, Path]] = None,
+    backend: str = "yunet",
 ) -> DetectionResult:
     """Detect faces in a still image.
 
     Args:
         image: A filesystem path to an image file (str or Path), or a NumPy array in BGR format.
         confidence_threshold: Minimum detection confidence score (0.0 to 1.0). Default is 0.7.
-        nms_threshold: Non-maximum suppression IoU threshold (0.0 to 1.0). Default is 0.3.
-        top_k: Maximum candidate faces to retain prior to NMS. Default is 5000.
-        model: Optional model name, alias, or custom local .onnx path.
+        nms_threshold: Non-maximum suppression IoU threshold (0.0 to 1.0, YuNet only). Default is 0.3.
+        top_k: Maximum candidate faces to retain prior to NMS (YuNet only). Default is 5000.
+        model: Optional model name, alias, or custom local model path.
         cache_dir: Optional custom directory to store/retrieve cached models.
+        backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
 
     Returns:
         DetectionResult containing detected faces and the original BGR image.
     """
     cache_key = (
+        str(backend).strip().lower(),
         str(model) if model is not None else None,
         float(confidence_threshold),
         float(nms_threshold),
@@ -107,6 +117,7 @@ def detect(
             nms_threshold=nms_threshold,
             top_k=top_k,
             cache_dir=cache_dir,
+            backend=backend,
         )
         _detector_cache[cache_key] = detector
 
@@ -150,6 +161,7 @@ __all__: List[str] = [
     "ImageSaveError",
     "ConfigurationError",
     "InvalidSettingError",
+    "DependencyNotFoundError",
     "CameraError",
     "CameraNotFoundError",
     "CameraReadError",
@@ -166,4 +178,8 @@ __all__: List[str] = [
     "get_cache_dir",
     "resolve_model",
     "verify_model_initialization",
+    "BaseFaceBackend",
+    "SUPPORTED_BACKENDS",
+    "DEFAULT_BACKEND",
+    "get_backend",
 ]
