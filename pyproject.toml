@@ -55,7 +55,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 markers = [
     "network: Tests that require external network access (e.g. live model download).",
     "optional_backend: Tests requiring optional backend installations (e.g. mediapipe).",

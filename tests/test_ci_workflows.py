@@ -91,7 +91,13 @@ def test_no_publishing_credentials_in_repository() -> None:
     token_prefix = "".join(["pypi-", "AgEI"])
 
     for f in repo_root.rglob("*.py"):
-        if ".venv" in f.parts or ".git" in f.parts or "dist" in f.parts or "build" in f.parts or f.name == "test_ci_workflows.py":
+        if (
+            ".venv" in f.parts
+            or ".git" in f.parts
+            or "dist" in f.parts
+            or "build" in f.parts
+            or f.name == "test_ci_workflows.py"
+        ):
             continue
         text = f.read_text(encoding="utf-8", errors="ignore")
         assert token_prefix not in text, f"PyPI token found in {f}"
