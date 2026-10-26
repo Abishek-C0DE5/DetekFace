@@ -154,6 +154,7 @@ def test_yunet_landmark_contract():
         assert len(face.landmarks.as_list()) == 5
 
 
+@pytest.mark.optional_backend
 def test_mediapipe_output_normalization_mocked():
     """Verify MediaPipe detections are normalized into canonical DetectionResult objects."""
     img = np.zeros((200, 200, 3), dtype=np.uint8)

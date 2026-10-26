@@ -285,6 +285,7 @@ def test_real_model_batch_detection_yunet():
     assert results.has_failures is False
 
 
+@pytest.mark.optional_backend
 def test_real_model_batch_detection_mediapipe():
     """Verify real MediaPipe model batch detection on sample assets."""
     asset_path = Path(__file__).parent / "assets" / "sample_face.jpg"
