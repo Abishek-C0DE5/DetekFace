@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-  <strong>High-performance, beginner-friendly face detection for Python powered by YuNet & OpenCV.</strong>
+  <strong>High-performance, beginner-friendly face detection for Python powered by YuNet, OpenCV & MediaPipe.</strong>
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/detekface/"><img src="https://img.shields.io/pypi/v/detekface.svg?color=00FF88&logo=pypi&logoColor=white" alt="PyPI Version"></a>
   <a href="https://pypi.org/project/detekface/"><img src="https://img.shields.io/pypi/pyversions/detekface.svg?logo=python&logoColor=white" alt="Python Versions"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
-  <a href="https://pypi.org/project/detekface/"><img src="https://img.shields.io/pypi/dm/detekface.svg?color=orange&logo=pypi&logoColor=white" alt="Downloads"></a>
+  <a href="https://github.com/Abishek-C0DE5/DetekFace/actions/workflows/ci.yml"><img src="https://github.com/Abishek-C0DE5/DetekFace/actions/workflows/ci.yml/badge.svg" alt="CI Status"></a>
   <a href="https://github.com/Abishek-C0DE5/DetekFace"><img src="https://img.shields.io/badge/GitHub-DetekFace-181717?logo=github&logoColor=white" alt="GitHub"></a>
 </p>
 
@@ -26,13 +26,13 @@ DetekFace is officially published on PyPI. Install it in seconds:
 pip install detekface
 ```
 
-To enable the optional MediaPipe backend:
+To enable the optional Google MediaPipe BlazeFace backend:
 
 ```bash
 pip install "detekface[mediapipe]"
 ```
 
-> **Zero configuration needed**: YuNet ONNX neural weights are automatically downloaded from trusted OpenCV mirrors, verified with SHA256 checksums, and cached locally on first run.
+> **Zero configuration needed**: YuNet ONNX neural weights are automatically downloaded from official OpenCV mirrors, verified with SHA256 checksums, and cached locally on first run.
 
 ---
 
@@ -40,9 +40,9 @@ pip install "detekface[mediapipe]"
 
 <div align="center">
 
-| 🚀 Getting Started | 🎨 Features & Visuals | 📚 Documentation |
+| 🚀 Getting Started | 🎨 Features & Workflows | 📚 Deep-Dive Documentation |
 | :--- | :--- | :--- |
-| • [**Minimal Quickstart**](#7-minimal-quick-start)<br>• [**Installation Details**](#5-installation-requirements)<br>• [**Windows 11 Setup**](#6-windows-11-installation-instructions) | • [**Live Webcam**](#8-webcam-usage--keyboard-controls)<br>• [**5 Overlay Styles**](#9-visual-overlay-styles--configuration-options)<br>• [**Face Cropping**](#10-face-capture-cropping--callbacks)<br>• [**Image Detection**](#11-still-image-detection--result-objects)<br>• [**Video Processing**](#12-prerecorded-video-support) | • [**Complete Docs Index**](docs/README.md)<br>• [**API Reference**](docs/api-reference.md)<br>• [**Troubleshooting**](docs/troubleshooting.md)<br>• [**Benchmarks**](#17-testing-instructions) |
+| • [**Minimal Quickstart**](#6-minimal-quick-start)<br>• [**Installation Requirements**](#4-installation-requirements)<br>• [**Windows 11 & OS Setup**](#5-windows-11--operating-system-setup) | • [**Live Webcam**](#7-live-webcam-usage--keyboard-controls)<br>• [**Camera Session API**](#8-advanced-camera-integration-session-lifecycle)<br>• [**5 Overlay Styles**](#9-visual-overlay-styles--color-customization)<br>• [**Face Cropping**](#10-face-capture-cropping--callbacks)<br>• [**Still Image Detection**](#11-still-image-detection--result-objects)<br>• [**Batch Processing**](#12-batch-image-detection-detect_many)<br>• [**Video Processing**](#13-prerecorded-video-processing)<br>• [**Command-Line Tool**](#14-command-line-interface-cli)<br>• [**Backend Selection**](#15-multiple-backend-selection-yunet--mediapipe) | • [**Documentation Index**](docs/README.md)<br>• [**Installation Guide**](docs/installation.md)<br>• [**Quick Start Guide**](docs/quickstart.md)<br>• [**Webcam Guide**](docs/webcam.md)<br>• [**Image Detection**](docs/image-detection.md)<br>• [**Batch Guide**](docs/batch.md)<br>• [**Video Guide**](docs/video.md)<br>• [**Face Capture Guide**](docs/face-capture.md)<br>• [**Backend Guide**](docs/backends.md)<br>• [**Configuration Reference**](docs/configuration.md)<br>• [**API Reference**](docs/api-reference.md)<br>• [**Troubleshooting Guide**](docs/troubleshooting.md)<br>• [**Validation Guide**](docs/validation.md)<br>• [**Development Guide**](docs/development.md)<br>• [**Licensing Guide**](docs/licensing.md) |
 
 </div>
 
@@ -54,19 +54,27 @@ pip install "detekface[mediapipe]"
 
 ---
 
-## 2. Implemented Features
+## 2. Implemented Features vs. Planned Improvements
 
+### ✅ Fully Implemented Features
 - 📹 **2-Line Live Webcam**: Start a real-time face detection camera stream with `detekface.camera()`.
 - 🔌 **Multiple Backends**: Seamlessly switch between built-in YuNet (`backend="yunet"`) and optional Google MediaPipe (`backend="mediapipe"`).
-- 🖼️ **Still-Image Face Detection**: Inspect faces, bounding boxes, confidence scores, and facial landmarks using `detekface.detect()`.
-- 📦 **Batch Image Processing**: Process directories or image lists with `detekface.detect_many()`.
-- 💻 **Command-Line Interface**: Run webcam, photo, batch, or video detection straight from terminal via `detekface`.
+- 🔄 **Advanced Camera Lifecycle**: Context manager `open_camera()` and `CameraSession` for headless frame iteration and programmatic capture.
+- 🖼️ **Still-Image Face Detection**: Inspect bounding boxes, confidence scores, and landmarks with `detekface.detect()`.
+- 📦 **Batch Image Processing**: Process directories or image lists with `detekface.detect_many()` with error tracking and progress callbacks.
+- 🎬 **Prerecorded Video Processing**: Process video files frame-by-frame with frame-skipping and resolution scaling via `detekface.video()`.
+- 💻 **Command-Line Interface**: Run camera, photo, batch, or video detection straight from terminal via `detekface`.
 - ✂️ **Pristine Face Cropping**: Extract clean, unpolluted face crops programmatically or with the <kbd>C</kbd> key. Drawn overlays never contaminate saved crops.
 - 🎨 **5 Distinct Overlay Styles**: Choose between tactical corner brackets, modern rounded boxes, classic rectangles, geometric circles, or a full sci-fi HUD.
 - 📊 **Real-Time Telemetry**: Display smoothed rolling-average FPS, detected face count badges, and confidence percentage tags.
-- 🎬 **Prerecorded Video Support**: Process video files frame-by-frame and export annotated clips with preserved resolution and framerate via `detekface.video()`.
 - 🔒 **Automatic Model Management**: Official YuNet ONNX and MediaPipe TFLite models are automatically downloaded, SHA256-verified, and cached locally.
-- 💡 **Actionable Error Messages**: Exception hierarchy with clear, friendly `.hint` attributes for disconnected webcams, missing files, or corrupted data.
+- 💡 **Actionable Error Messages**: Exception hierarchy with friendly `.hint` attributes for disconnected webcams, missing files, or corrupted data.
+- 🧪 **Comprehensive CI/CD**: Matrix testing across Linux, Windows, and macOS (Python 3.9–3.13) with PyPI Trusted Publishing.
+
+### 🔮 Planned Improvements (Roadmap)
+- 📐 **Face Alignment Normalization**: Optional 2D affine rotation aligning eye landmarks horizontally before saving crops.
+- 🧵 **Multi-Threaded Batch Inference**: Optional parallel worker pool for batch image processing.
+- 🎥 **Video Audio Multiplexing**: Optional FFmpeg integration for preserving original audio streams during video re-encoding.
 
 ---
 
@@ -80,8 +88,8 @@ pip install "detekface[mediapipe]"
                                      |
                                      v [BGR Image Frame]
                       +-----------------------------+
-                      |   YuNet Deep Learning Model |
-                      |   (via OpenCV Graph Engine) |
+                      |   Deep Learning Model       |
+                      |   (YuNet ONNX / MediaPipe)  |
                       +--------------+--------------+
                                      |
                                      v [Coordinates & Confidences]
@@ -103,62 +111,35 @@ pip install "detekface[mediapipe]"
  [Annotated Preview / Video]                       [Clean Unpolluted Crop]
 ```
 
-1. **Frame Ingestion**: An image, video frame, or webcam feed is converted into a standard 3-channel BGR uint8 NumPy array.
-2. **Inference**: The frame is forwarded through the YuNet convolutional neural network via OpenCV's `FaceDetectorYN`.
-3. **Parsing**: Network proposals are decoded into high-level dataclasses containing bounding box coordinates `(x, y, width, height)`, detection confidence `(0.0 to 1.0)`, and 5 facial keypoints (eyes, nose tip, mouth corners).
+1. **Frame Ingestion**: Input images, video frames, or webcam feeds are standardized into 3-channel BGR uint8 NumPy arrays.
+2. **Inference**: Frames pass through the deep learning detector (YuNet via OpenCV `FaceDetectorYN` or MediaPipe BlazeFace).
+3. **Parsing**: Network proposals are converted into structured dataclasses containing bounding box coordinates `(x, y, width, height)`, confidence scores `(0.0 to 1.0)`, and anatomical keypoints.
 4. **Overlay Rendering**: Visual indicators are drawn onto a *copy* of the frame for preview display or video export.
 5. **Crop Purity**: When cropping faces, DetekFace slices directly from the *pristine original frame*, ensuring saved face images remain 100% clean and free of drawn graphics.
 
 ---
 
-## 4. Architecture Overview
+## 4. Installation Requirements
 
-<details>
-<summary><strong>🔍 Click to expand Architecture Flowchart & Component Breakdown</strong></summary>
-
-<br>
-
-```mermaid
-graph TD
-    A[Image / Webcam / Video Input] --> B[detector.py: _load_and_validate_image]
-    B --> C[models.py: resolve_model & cache]
-    C --> D[cv2.FaceDetectorYN: YuNet Inference]
-    D --> E[types.py: DetectionResult & FaceDetection]
-    E --> F[drawing.py: draw_faces & draw_metrics_overlay]
-    E --> G[capture.py: capture]
-    F --> H[display_frame: Preview / Saved Video]
-    G --> I[FaceCapture: Clean Image File / Array]
-```
-
-- **`models.py`**: Resolves model version compatibility (dynamic-shape `yunet_2026may` for OpenCV 5.x, fixed-shape `yunet_2023mar` for OpenCV 4.x), verifies SHA256 hashes, and manages atomic user caching.
-- **`detector.py`**: Validates dimensions, handles color-space conversions (Grayscale, BGRA, float to uint8), and executes inference.
-- **`drawing.py`**: Pure rendering module supporting 5 overlay shapes, RGB/hex-to-BGR color mapping, and rolling-window FPS calculation.
-- **`capture.py`**: Handles boundary clamping, largest-face selection, and unpolluted disk/memory image cropping.
-- **`camera.py` & `video.py`**: Interactive streaming loops with keyboard polling and guaranteed resource cleanup.
-
-</details>
-
----
-
-## 5. Installation Requirements
-
-- **Python**: `>= 3.9` through `3.15+` (tested on 3.15.1 64-bit).
+- **Python**: `>= 3.9` through `3.13` (tested on 3.10, 3.11, 3.12, 3.15).
 - **Core Dependencies**:
   - `numpy>=1.20`
-  - `opencv-python>=4.8` *(standard GUI-capable wheel; do not use `opencv-python-headless` if preview windows are required)*.
+  - `opencv-python>=4.8` *(standard GUI-capable wheel; use `opencv-python-headless` for headless cloud environments)*.
 - **Optional Extras**:
-  - `mediapipe>=0.10.0`: Install via `pip install "detekface[mediapipe]"` to enable Google's BlazeFace backend.
+  - `mediapipe>=0.10.0`: Install via `pip install "detekface[mediapipe]"` for Google's BlazeFace backend.
+- **Developer Extras**:
+  - `pytest>=7.0`, `ruff>=0.1.0`, `mypy>=1.0`, `build>=1.0`, `twine>=5.0`: Install via `pip install -e ".[dev]"`.
 
 ---
 
-## 6. Windows 11 Installation Instructions
+## 5. Windows 11 & Operating System Setup
 
 <details>
-<summary><strong>🪟 Step-by-Step Windows 11 Virtual Environment Setup</strong></summary>
+<summary><strong>🪟 Step-by-Step Windows 11 Setup</strong></summary>
 
 <br>
 
-1. **Open PowerShell or Windows Terminal**:
+1. **Open Windows Terminal or PowerShell**:
    ```powershell
    python --version
    pip --version
@@ -178,9 +159,42 @@ graph TD
 
 </details>
 
+<details>
+<summary><strong>🐧 Linux (Ubuntu / Debian) Setup</strong></summary>
+
+<br>
+
+1. **Install OpenCV system libraries**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+   ```
+
+2. **Create virtual environment and install**:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install detekface
+   ```
+
+</details>
+
+<details>
+<summary><strong>🍎 macOS Setup (Apple Silicon & Intel)</strong></summary>
+
+<br>
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install detekface
+```
+
+</details>
+
 ---
 
-## 7. Minimal Quick-Start
+## 6. Minimal Quick-Start
 
 The simplest working example requires only **2 lines of Python**:
 
@@ -194,7 +208,7 @@ This immediately opens your default camera, runs real-time face detection, and d
 
 ---
 
-## 8. Webcam Usage & Keyboard Controls
+## 7. Live Webcam Usage & Keyboard Controls
 
 Launch the camera with custom options:
 
@@ -225,9 +239,39 @@ During webcam or video playback, use these keyboard shortcuts:
 | <kbd>Esc</kbd> | **Emergency Exit** | Immediately closes all OpenCV windows and terminates the loop. |
 | <kbd>✕</kbd> | **Window Close** | Clicking the OS window close button terminates safely without hanging. |
 
+👉 For full details, see the **[Live Webcam Guide](docs/webcam.md)**.
+
 ---
 
-## 9. Visual Overlay Styles & Configuration Options
+## 8. Advanced Camera Integration (Session Lifecycle)
+
+For web frameworks (FastAPI, Flask), robotics, or headless background workers, use `open_camera()` and `CameraSession`:
+
+```python
+import detekface
+
+# Open camera with explicit lifecycle management:
+with detekface.open_camera(camera_index=0, mirror=True) as session:
+    print(f"Camera opened: {session.camera_index}")
+
+    for i in range(30):
+        # Read the latest frame and structured detections:
+        result = session.read()
+
+        if result.has_faces:
+            print(f"Frame #{i}: Detected {result.count} face(s)")
+
+        # Programmatically capture a face while the camera is active:
+        if i == 15 and result.has_faces:
+            crop = session.capture(save_dir="captures", filename="avatar.jpg")
+            print(f"Saved programmatic crop to: {crop.path}")
+
+# Camera hardware is automatically released upon exit!
+```
+
+---
+
+## 9. Visual Overlay Styles & Color Customization
 
 DetekFace includes **5 built-in face overlay shapes**:
 
@@ -245,12 +289,13 @@ Colors accept any of the following formats:
 - **Predefined Color Names**: `"green"`, `"neon_green"`, `"cyan"`, `"red"`, `"blue"`, `"yellow"`, `"magenta"`, `"orange"`, `"white"`, `"lime"`, `"teal"`, `"purple"`
 - **RGB Tuples**: `(0, 255, 136)`, `(255, 0, 0)`
 
+👉 For visual details, see the **[Configuration & Styling Guide](docs/configuration.md)**.
+
 ---
 
 ## 10. Face Capture, Cropping, & Callbacks
 
 ### Programmatic Capture
-
 Crop the largest face or a specific face index from any `DetectionResult`:
 
 ```python
@@ -269,7 +314,6 @@ rgb_array = memory_face.rgb_image  # NumPy array converted to RGB for PIL / Matp
 ```
 
 ### Webcam Capture Callback
-
 Receive captured faces programmatically whenever the user presses <kbd>C</kbd>:
 
 ```python
@@ -283,6 +327,8 @@ def handle_capture(face: detekface.FaceCapture) -> None:
 
 detekface.camera(on_capture=handle_capture)
 ```
+
+👉 For more details, see the **[Face Capture & Cropping Guide](docs/face-capture.md)**.
 
 ---
 
@@ -315,11 +361,41 @@ result.show(shape="hud", color="cyan", show_confidence=True)
 result.save("output_annotated.jpg", shape="hud", color="#00FF88", show_confidence=True)
 ```
 
+👉 For more details, see the **[Image Detection Guide](docs/image-detection.md)**.
+
 ---
 
-## 12. Prerecorded Video Support
+## 12. Batch Image Detection (`detect_many`)
 
-Process video files frame-by-frame and export annotated video with preserved resolution and framerate:
+Process lists of image paths or entire directories with error reporting and progress callbacks:
+
+```python
+import detekface
+
+# 1. Process a list of images or a folder path
+results = detekface.detect_many(
+    "dataset/photos/",
+    progress_callback=lambda done, total: print(f"Processing: {done}/{total}"),
+    keep_images=False,  # Low memory usage for large batches
+)
+
+print(f"Batch Summary: {results.total_faces} faces across {len(results.successes)} photos.")
+
+# 2. Iterate through items
+for item in results:
+    if item.is_success:
+        print(f"✓ {item.source}: {item.count} face(s)")
+    else:
+        print(f"✗ {item.source}: error - {item.error}")
+```
+
+👉 For more details, see the **[Batch Detection Guide](docs/batch.md)**.
+
+---
+
+## 13. Prerecorded Video Processing
+
+Process video files frame-by-frame and export annotated clips with preserved resolution and framerate:
 
 ```python
 import detekface
@@ -327,21 +403,24 @@ import detekface
 saved_path = detekface.video(
     path="input_clip.mp4",
     output_path="annotated_clip.mp4",
-    show=True,  # Set show=False for headless server processing
+    show=True,  # Set show=False for headless processing
     shape="hud",
     color="#00FF88",
     show_confidence=True,
     show_fps=True,
     show_count=True,
+    frame_skip=1,  # Skip 1 frame between detections for 2x speedup
 )
 print(f"Exported annotated video to: {saved_path}")
 ```
 
 *(Note: Audio tracks are not re-encoded; only visual video frames are processed and exported).*
 
+👉 For more details, see the **[Video Processing Guide](docs/video.md)**.
+
 ---
 
-## 13. Command-Line Interface (CLI)
+## 14. Command-Line Interface (CLI)
 
 `detekface` provides a lightweight, beginner-friendly command-line tool with zero extra dependencies:
 
@@ -367,7 +446,31 @@ detekface video clip.mp4 --output clip_detected.mp4 --no-preview
 
 ---
 
-## 13. Configuration & Error Handling
+## 15. Multiple Backend Selection (YuNet & MediaPipe)
+
+DetekFace allows you to select between the built-in YuNet backend (default) and Google's MediaPipe BlazeFace:
+
+```python
+import detekface
+
+# 1. Use default YuNet backend (5 landmarks)
+result_yunet = detekface.detect("photo.jpg", backend="yunet")
+
+# 2. Use optional MediaPipe backend (6 keypoints)
+result_mp = detekface.detect("photo.jpg", backend="mediapipe")
+```
+
+| Feature | YuNet (Default) | MediaPipe (Optional) |
+| :--- | :--- | :--- |
+| **Dependencies** | None (`opencv-python` included) | `pip install "detekface[mediapipe]"` |
+| **Landmarks** | 5 points (eyes, nose, mouth corners) | 6 keypoints (eyes, nose, mouth center, ears) |
+| **Fail Policy** | Built-in | Raises `DependencyNotFoundError` with install hint |
+
+👉 For more details, see the **[Backend Selection Guide](docs/backends.md)**.
+
+---
+
+## 16. Configuration & Error Handling
 
 DetekFace provides structured, actionable exceptions:
 
@@ -399,6 +502,8 @@ DetekFaceError
  │    ├── InvalidImageError
  │    └── ImageSaveError
  ├── ConfigurationError
+ ├── DependencyNotFoundError
+ ├── InvalidSettingError
  ├── CameraError
  │    ├── CameraNotFoundError
  │    └── CameraReadError
@@ -406,6 +511,7 @@ DetekFaceError
  │    ├── NoFaceDetectedError
  │    ├── InvalidCropError
  │    └── CaptureSaveError
+ ├── BatchError
  └── VideoError
       ├── VideoNotFoundError
       ├── InvalidVideoError
@@ -414,28 +520,31 @@ DetekFaceError
 
 </details>
 
+👉 For full configuration details, see the **[Configuration Reference](docs/configuration.md)** and **[Troubleshooting Guide](docs/troubleshooting.md)**.
+
 ---
 
-## 14. Supported Python & Dependency Versions
+## 17. Supported Platforms & Dependencies
 
 | Component | Supported Versions | Tested Environment |
 | :--- | :--- | :--- |
-| **Python** | `>= 3.9`, `3.10`, `3.11`, `3.12`, `3.13`, `3.14`, `3.15` | `3.15.1 64-bit` |
+| **Python** | `>= 3.9`, `3.10`, `3.11`, `3.12`, `3.13`, `3.15` | `3.15.1 64-bit` |
 | **NumPy** | `>= 1.20` | `2.5.4` |
 | **OpenCV** | `>= 4.8` (`opencv-python` or `opencv-contrib-python`) | `5.0.0.93` |
-| **Operating System** | Windows 11, Windows 10, Linux, macOS | Windows 11 (AMD64) |
+| **Operating Systems** | Windows 11, Windows 10, Linux, macOS | Windows 11 (AMD64) |
 
 ---
 
-## 15. Model Acquisition, Caching, & Licensing
+## 18. Model Acquisition, Caching, & Checksums
 
 - **Automatic Download**: On first use, the model file is automatically downloaded from the official OpenCV Model Zoo.
 - **Model Files**:
   - `face_detection_yunet_2026may.onnx` (dynamic shape for OpenCV 5.x graph engine)
-  - `face_detection_yunet_2023mar.onnx` (for OpenCV 4.x)
+  - `face_detection_yunet_2023mar.onnx` (fixed shape for OpenCV 4.x)
+  - `blaze_face_short_range.tflite` (for MediaPipe backend)
 - **Local Cache Directory**:
-  - Windows: `%LOCALAPPDATA%\detekface` (e.g. `C:\Users\<User>\AppData\Local\detekface`)
-  - Linux/macOS: `~/.cache/detekface`
+  - Windows: `%LOCALAPPDATA%\detekface\models`
+  - Linux/macOS: `~/.cache/detekface/models`
 - **Integrity Verification**: Downloads are validated against official SHA256 checksums before caching.
 - **Custom Local Model**: Pass an explicit model path to bypass remote downloads:
   ```python
@@ -446,7 +555,7 @@ DetekFaceError
 
 ---
 
-## 16. Troubleshooting Common Issues
+## 19. Troubleshooting Common Issues
 
 <details>
 <summary><strong>🔧 Click to expand Common Fixes & Troubleshooting Guides</strong></summary>
@@ -460,7 +569,7 @@ DetekFaceError
 - **Fix**: If running on a headless server or Docker container without a graphical display, set `show=False` in `detekface.video()` or avoid calling `result.show()`.
 
 ### Corporate Proxy Blocking Model Downloads
-- **Fix**: Download `face_detection_yunet_2026may.onnx` manually from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), place it in `%LOCALAPPDATA%\detekface`, or pass the local path via `model="path/to/model.onnx"`.
+- **Fix**: Download `face_detection_yunet_2026may.onnx` manually from the [OpenCV Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet), place it in `%LOCALAPPDATA%\detekface\models`, or pass the local path via `model="path/to/model.onnx"`.
 
 👉 For comprehensive troubleshooting steps, visit the **[Detailed Troubleshooting Guide](docs/troubleshooting.md)**.
 
@@ -468,17 +577,17 @@ DetekFaceError
 
 ---
 
-## 17. Testing Instructions
+## 20. Testing & Performance Benchmarks
 
 Run the complete automated test suite using `pytest`:
 
-```powershell
+```bash
 pytest -v
 ```
 
-Execute repeatable performance benchmarks on your hardware:
+Execute repeatable performance benchmarks on your CPU:
 
-```powershell
+```bash
 python examples/benchmark.py
 ```
 
@@ -497,43 +606,35 @@ Resolution   | Mean Latency | Median Latency | P95 Latency | Throughput (FPS)
 
 </details>
 
+---
+
+## 21. Quality Validation Suite
+
 Execute the reproducible quality validation suite comparing backends across real-world challenge scenarios (no faces, distant faces, low light, harsh shadows, profile angles, occlusions):
 
-```powershell
+```bash
 python validation/download_dataset.py
 python validation/evaluate.py --compare
 ```
 
-See the **[Quality Validation Methodology & Benchmark Guide](docs/validation.md)** for mathematical metric definitions (Precision, Recall, F1, IoU), dataset licensing, and detailed backend tradeoffs.
+See the **[Quality Validation Methodology Guide](docs/validation.md)** for mathematical metric definitions (Precision, Recall, F1, IoU), dataset licensing, and detailed backend tradeoffs.
 
 ---
 
-## 18. Development Setup & Contributing
+## 22. Development Setup & Contributing
 
-1. Clone the repository:
-   ```powershell
-   git clone https://github.com/Abishek-C0DE5/DetekFace.git
-   cd DetekFace
-   ```
-2. Create and activate a virtual environment:
-   ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   ```
-3. Install development dependencies:
-   ```powershell
-   pip install -e ".[dev]"
-   ```
-4. Run tests before submitting changes:
-   ```powershell
-   pytest
-   ```
+We welcome contributions!
+1. Clone the repository: `git clone https://github.com/Abishek-C0DE5/DetekFace.git`
+2. Install developer dependencies: `pip install -e ".[dev,mediapipe]"`
+3. Run linter and formatter: `ruff check .` and `ruff format --check .`
+4. Run type checker: `mypy`
+5. Run unit tests: `pytest -v -m "not network and not optional_backend"`
 
-Check out our **[Development Guide](docs/development.md)** for full contributing guidelines.
+Check out our **[Contributing Guide](CONTRIBUTING.md)** and **[Development Guide](docs/development.md)**.
 
 ---
 
-## 19. License Information
+## 23. Licensing & Credits
 
 ### Software License
 DetekFace is released under the **MIT License**. See [LICENSE](LICENSE) for details.
@@ -544,17 +645,8 @@ The YuNet face detection model was created by Shiqi Yu and is distributed under 
 - **Model License**: MIT License (Copyright (c) 2020 Shiqi Yu)
 - **Source**: [OpenCV Model Zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
 
----
+### MediaPipe BlazeFace License & Credits
+- **Author**: Google MediaPipe Team & Google LLC
+- **Model License**: Apache-2.0 License
 
-## 20. Current Limitations & Future Improvements
-
-### Current Limitations
-1. **No Identity Tracking**: DetekFace detects face locations on each frame independently; it does not track unique individuals across disparate frames.
-2. **Tiny Faces**: Faces smaller than ~20x20 pixels in high-resolution frames may require lowering `confidence_threshold` (e.g. `0.35`–`0.45`).
-3. **Extreme Profiles**: Optimized for frontal and semi-profile views (up to ~60° yaw). Perpendicular side profiles (>60°) may exhibit lower detection confidence.
-4. **Video Audio**: Prerecorded video export processes visual frames only; audio streams are not re-encoded.
-
-### Planned Improvements
-- Optional face alignment normalization prior to saving crops.
-- Batch image inference optimization for multi-core processing.
-- Direct integration with camera resolution negotiation controls.
+👉 For complete IP breakdown, see the **[Licensing & Intellectual Property Guide](docs/licensing.md)**.

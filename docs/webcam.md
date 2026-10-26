@@ -301,7 +301,78 @@ detekface.camera(
 
 ---
 
-## 8. Full Parameter Reference
+---
+
+## 8. Advanced Camera Integration (`open_camera` & `CameraSession`)
+
+For web frameworks (FastAPI, Flask, Streamlit), custom GUI applications (PyQt, Tkinter), robotics pipelines, or headless background workers, you may need explicit control over the camera lifecycle without launching the built-in desktop window.
+
+DetekFace provides `detekface.open_camera()` and the `CameraSession` context manager for this purpose.
+
+### 1. Context Manager with Frame-by-Frame Processing
+```python
+import detekface
+
+# Open camera with guaranteed resource cleanup on exit or error:
+with detekface.open_camera(camera_index=0, mirror=True) as session:
+    print(f"Camera opened: {session.camera_index}, is_open={session.is_open}")
+
+    for i in range(30):
+        # Read the latest frame and run face detection:
+        result = session.read()
+
+        if result.has_faces:
+            print(f"Frame #{i}: Detected {result.count} face(s)")
+            first_face = result.faces[0]
+            print(f"  Confidence: {first_face.confidence:.1%}, Box: {first_face.bbox.as_tuple()}")
+
+        # Programmatically capture the largest face while session is active:
+        if i == 15 and result.has_faces:
+            crop = session.capture(save_dir="captures", filename="session_avatar.jpg")
+            print(f"Saved programmatic crop to: {crop.path}")
+
+# Camera hardware is automatically released upon exiting the context block!
+print(f"Camera closed: is_open={session.is_open}")
+```
+
+### 2. Stream Iterator Loop
+You can also iterate over the session directly like a standard Python generator:
+
+```python
+import detekface
+
+with detekface.open_camera(confidence_threshold=0.6) as session:
+    for result in session:
+        print(f"Real-time detections: {result.count}")
+        # Break loop whenever your application criteria are met:
+        if result.count >= 2:
+            print("Multiple subjects detected, stopping monitor.")
+            break
+```
+
+### 3. Callback-Based Streaming
+```python
+import detekface
+
+
+def process_detections(result: detekface.DetectionResult) -> None:
+    if result.has_faces:
+        print(f"Detected face at: {result.faces[0].bbox.as_tuple()}")
+
+
+with detekface.open_camera() as session:
+    # Process up to 100 frames via callback:
+    session.stream(callback=process_detections, max_frames=100)
+```
+
+### 4. Frame Ownership & Copying Contract
+- **Original Frame**: `session.latest_frame` returns a clean, unpolluted copy of the current BGR video frame.
+- **Annotated Overlays**: Calling `result.annotate()` generates a new annotated NumPy array; it never modifies the original frame stored inside `session.latest_frame`.
+- **Face Crops**: `session.capture()` always slices from the pristine original frame, guaranteeing that saved crops never contain drawn bounding boxes.
+
+---
+
+## 9. Full Parameter Reference
 
 ```python
 def camera(
@@ -319,14 +390,16 @@ def camera(
     on_capture: Optional[Callable[[FaceCapture], None]] = None,
     window_title: str = "detekface - Live Face Detection",
     max_frames: Optional[int] = None,
+    backend: str = "yunet",
 ) -> None: ...
 ```
 
 | Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `camera_index` | `int` | `0` | Hardware device index (`0` for primary, `1` for secondary). |
+| `camera_index` | `int` | `0` | Hardware device index (`0` for primary, `1` for secondary USB webcam). |
 | `mirror` | `bool` | `True` | Horizontally flips the live feed for natural mirror view. |
 | `confidence_threshold` | `float` | `0.7` | Minimum detection certainty required (`0.0` to `1.0`). |
+| `backend` | `str` | `"yunet"` | Detection backend: `"yunet"` (default) or `"mediapipe"`. |
 | `shape` | `str` | `"rectangle"` | Overlay shape: `"rectangle"`, `"corners"`, `"circle"`, `"rounded"`, `"hud"`. |
 | `color` | `str` / `tuple` | `"#00FF88"` | Hex string (`"#00FF88"`), named color (`"cyan"`), or `(R, G, B)` tuple. |
 | `thickness` | `int` | `3` | Line stroke width in pixels (`>= 1`). |
@@ -337,3 +410,5 @@ def camera(
 | `on_capture` | `Callable` | `None` | Callback invoked with `FaceCapture` when <kbd>C</kbd> is pressed. |
 | `window_title` | `str` | `"..."` | Custom text shown on the desktop window title bar. |
 | `max_frames` | `Optional[int]` | `None` | Max frames to process before closing (useful for automated testing). |
+| `detector` | `Optional[FaceDetector]` | `None` | Pre-initialized detector instance to reuse. |
+

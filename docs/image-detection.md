@@ -53,7 +53,9 @@ def detect(
     nms_threshold: float = 0.3,
     top_k: int = 5000,
     model: Optional[Union[str, Path]] = None,
+    backend: str = "yunet",
     cache_dir: Optional[Union[str, Path]] = None,
+    input_size: Optional[Tuple[int, int]] = None,
 ) -> DetectionResult: ...
 ```
 
@@ -65,8 +67,10 @@ def detect(
 | `confidence_threshold` | `float` | `0.7` | Filtering threshold between `0.0` and `1.0`. Only candidate faces with scores equal to or higher than this value are returned. |
 | `nms_threshold` | `float` | `0.3` | Non-Maximum Suppression (NMS) intersection-over-union (IoU) threshold used to suppress duplicate overlapping boxes. |
 | `top_k` | `int` | `5000` | Maximum candidate proposals evaluated before NMS filtering. |
-| `model` | `str`, `Path`, `None` | `None` | Custom local `.onnx` model path, or official model key (e.g., `"yunet-202303"`). Defaults to the official YuNet release. |
+| `model` | `str`, `Path`, `None` | `None` | Custom local model path or official model alias. Defaults to the official YuNet release. |
+| `backend` | `str` | `"yunet"` | Detection backend: `"yunet"` (default) or `"mediapipe"`. |
 | `cache_dir` | `str`, `Path`, `None` | `None` | Custom directory for downloading and caching the ONNX model file. |
+| `input_size` | `Optional[Tuple[int, int]]` | `None` | Optional `(width, height)` downscaling resolution for model inference. Coordinates are automatically rescaled to original dimensions! |
 
 ---
 

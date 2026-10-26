@@ -10,6 +10,7 @@ This directory contains complete, runnable example scripts demonstrating key cap
 | :--- | :--- | :--- |
 | **`webcam.py`** | `python examples/webcam.py` | Opens a live interactive webcam preview with real-time HUD overlays, smoothed FPS counter, face count badge, and keyboard face capture (`C`). |
 | **`detect_image.py`** | `python examples/detect_image.py` | Detects faces in an image file, prints coordinates and 5 facial landmarks, and saves an annotated output image. |
+| **`batch_detection.py`** | `python examples/batch_detection.py` | Runs batch face detection across folders or image lists with progress callbacks and optional crop saving. |
 | **`crop_face.py`** | `python examples/crop_face.py` | Programmatically crops the most prominent face from a photo and saves the unannotated crop to disk. |
 | **`video_detection.py`** | `python examples/video_detection.py` | Processes a prerecorded video file frame-by-frame with customizable overlay styles and exports an annotated video. |
 | **`benchmark.py`** | `python examples/benchmark.py` | Benchmarks inference latency (Mean, Median, P95) and FPS throughput across multiple resolutions (320x240, 640x480, 1280x720) on your local hardware. |
