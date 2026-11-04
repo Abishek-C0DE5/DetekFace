@@ -42,7 +42,7 @@ pip install "detekface[mediapipe]"
 
 | 🚀 Getting Started | 🎨 Features & Workflows | 📚 Deep-Dive Documentation |
 | :--- | :--- | :--- |
-| • [**Minimal Quickstart**](#6-minimal-quick-start)<br>• [**Installation Requirements**](#4-installation-requirements)<br>• [**Windows 11 & OS Setup**](#5-windows-11--operating-system-setup) | • [**Live Webcam**](#7-live-webcam-usage--keyboard-controls)<br>• [**Camera Session API**](#8-advanced-camera-integration-session-lifecycle)<br>• [**5 Overlay Styles**](#9-visual-overlay-styles--color-customization)<br>• [**Face Cropping**](#10-face-capture-cropping--callbacks)<br>• [**Still Image Detection**](#11-still-image-detection--result-objects)<br>• [**Batch Processing**](#12-batch-image-detection-detect_many)<br>• [**Video Processing**](#13-prerecorded-video-processing)<br>• [**Command-Line Tool**](#14-command-line-interface-cli)<br>• [**Backend Selection**](#15-multiple-backend-selection-yunet--mediapipe) | • [**Documentation Index**](docs/README.md)<br>• [**Installation Guide**](docs/installation.md)<br>• [**Quick Start Guide**](docs/quickstart.md)<br>• [**Webcam Guide**](docs/webcam.md)<br>• [**Image Detection**](docs/image-detection.md)<br>• [**Batch Guide**](docs/batch.md)<br>• [**Video Guide**](docs/video.md)<br>• [**Face Capture Guide**](docs/face-capture.md)<br>• [**Backend Guide**](docs/backends.md)<br>• [**Configuration Reference**](docs/configuration.md)<br>• [**API Reference**](docs/api-reference.md)<br>• [**Troubleshooting Guide**](docs/troubleshooting.md)<br>• [**Validation Guide**](docs/validation.md)<br>• [**Development Guide**](docs/development.md)<br>• [**Licensing Guide**](docs/licensing.md) |
+| • [**Minimal Quickstart**](#6-minimal-quick-start)<br>• [**Installation Requirements**](#4-installation-requirements)<br>• [**Windows 11 & OS Setup**](#5-windows-11--operating-system-setup) | • [**Live Webcam**](#7-live-webcam-usage--keyboard-controls)<br>• [**Camera Session API**](#8-advanced-camera-integration-session-lifecycle)<br>• [**5 Overlay Styles**](#9-visual-overlay-styles--color-customization)<br>• [**Face Cropping**](#10-face-capture-cropping--callbacks)<br>• [**Still Image Detection**](#11-still-image-detection--result-objects)<br>• [**Batch Processing**](#12-batch-image-detection-detect_many)<br>• [**Video Processing**](#13-prerecorded-video-processing)<br>• [**Command-Line Tool**](#14-command-line-interface-cli)<br>• [**Backend Selection**](#15-multiple-backend-selection-yunet--mediapipe)<br>• [**Face Shape Analysis**](#16-face-shape-detection--biometric-scanner) | • [**Documentation Index**](docs/README.md)<br>• [**Installation Guide**](docs/installation.md)<br>• [**Quick Start Guide**](docs/quickstart.md)<br>• [**Webcam Guide**](docs/webcam.md)<br>• [**Image Detection**](docs/image-detection.md)<br>• [**Batch Guide**](docs/batch.md)<br>• [**Video Guide**](docs/video.md)<br>• [**Face Capture Guide**](docs/face-capture.md)<br>• [**Backend Guide**](docs/backends.md)<br>• [**Face Shape Guide**](docs/face-shape.md)<br>• [**Configuration Reference**](docs/configuration.md)<br>• [**API Reference**](docs/api-reference.md)<br>• [**Troubleshooting Guide**](docs/troubleshooting.md)<br>• [**Validation Guide**](docs/validation.md)<br>• [**Development Guide**](docs/development.md)<br>• [**Licensing Guide**](docs/licensing.md) |
 
 </div>
 
@@ -59,6 +59,7 @@ pip install "detekface[mediapipe]"
 ### ✅ Fully Implemented Features
 - 📹 **2-Line Live Webcam**: Start a real-time face detection camera stream with `detekface.camera()`.
 - 🔌 **Multiple Backends**: Seamlessly switch between built-in YuNet (`backend="yunet"`) and optional Google MediaPipe (`backend="mediapipe"`).
+- 👤 **Face Shape Detection & Biometric Scanner**: Dense 478-landmark geometric analysis supporting **both** still images and real-time webcam feeds with HUD laser scanning.
 - 🔄 **Advanced Camera Lifecycle**: Context manager `open_camera()` and `CameraSession` for headless frame iteration and programmatic capture.
 - 🖼️ **Still-Image Face Detection**: Inspect bounding boxes, confidence scores, and landmarks with `detekface.detect()`.
 - 📦 **Batch Image Processing**: Process directories or image lists with `detekface.detect_many()` with error tracking and progress callbacks.
@@ -470,7 +471,56 @@ result_mp = detekface.detect("photo.jpg", backend="mediapipe")
 
 ---
 
-## 16. Configuration & Error Handling
+## 16. Face Shape Detection & Biometric Scanner
+
+DetekFace includes full Face Shape Detection powered by dense 478-point 3D facial landmarks and geometric proportion analysis across **both** still images and real-time webcam feeds.
+
+### Mode 1: Still-Image Face-Shape Analysis
+
+Analyze a supplied photo without opening a webcam:
+
+```python
+import detekface
+
+result = detekface.detect(
+    "portrait.jpg",
+    analyze_face_shape=True
+)
+
+for face in result.faces:
+    print(f"Shape       : {face.face_shape.label}")        # 'oval', 'round', 'square', 'heart', 'diamond', 'oblong', 'undetermined'
+    print(f"Fit Score   : {face.face_shape.fit_score:.2f}")    # Heuristic fit score (0.0 to 1.0)
+    print(f"Alternatives: {face.face_shape.alternatives}") # Candidates ranked by fit score
+    print(f"Measurements: {face.face_shape.measurements}") # Proportions, ratios, and jaw angle
+    print(f"Warnings    : {face.face_shape.warnings}")     # Reasons if quality is degraded
+
+# Save annotated photo with contour silhouette and shape badges
+result.save("portrait_analyzed.jpg", show_face_shape=True, show_shape_measurements=True)
+```
+
+### Mode 2: Real-Time Webcam Scanner
+
+Launch the real-time biometric scanner with animated HUD laser sweep and temporal smoothing:
+
+```python
+import detekface
+
+detekface.camera(
+    analyze_face_shape=True,
+    show_face_shape=True,
+    face_shape_effect="scan",  # Biometric HUD laser scanline
+)
+```
+
+- **HUD Laser Scanline**: Smooth oscillating laser sweeps down and up the face bounding box.
+- **Temporal Smoothing**: `TemporalShapeTracker` eliminates frame-to-frame flicker with multi-frame voting.
+- **Pristine Capture**: Press <kbd>C</kbd> to save the largest face crop untouched by annotations, while retaining structured shape metadata.
+
+👉 For comprehensive details, see the **[Face Shape Guide](docs/face-shape.md)**.
+
+---
+
+## 17. Configuration & Error Handling
 
 DetekFace provides structured, actionable exceptions:
 

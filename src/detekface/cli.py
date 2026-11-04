@@ -125,6 +125,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Exit automatically after processing this many frames (for testing).",
     )
+    p_cam.add_argument(
+        "--face-shape",
+        action="store_true",
+        help="Enable real-time biometric face shape scanner and HUD overlays.",
+    )
     p_cam.set_defaults(func=_handle_camera)
 
     # -------------------------------------------------------------------------
@@ -201,6 +206,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--show",
         action="store_true",
         help="Display preview window of annotated image.",
+    )
+    p_img.add_argument(
+        "--face-shape",
+        action="store_true",
+        help="Analyze and print geometric face shape (oval, round, square, heart, diamond, oblong).",
     )
     p_img.set_defaults(func=_handle_image)
 
@@ -285,6 +295,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=3,
         help="Overlay stroke thickness in pixels (default: 3).",
+    )
+    p_batch.add_argument(
+        "--face-shape",
+        action="store_true",
+        help="Analyze geometric face shapes across the batch.",
     )
     p_batch.set_defaults(func=_handle_batch)
 
@@ -384,6 +399,7 @@ def _handle_camera(args: argparse.Namespace) -> int:
             window_title=args.window_title,
             max_frames=args.max_frames,
             backend=args.backend,
+            analyze_face_shape=getattr(args, "face_shape", False),
         )
         return 0
     except DetekFaceError as err:
@@ -418,10 +434,12 @@ def _handle_image(args: argparse.Namespace) -> int:
             return 1
 
     try:
+        analyze_shape = getattr(args, "face_shape", False)
         result = detekface.detect(
             image=input_path,
             confidence_threshold=args.confidence,
             backend=args.backend,
+            analyze_face_shape=analyze_shape,
         )
 
         print(f"Detected {result.count} face(s) in '{input_path}' (backend: {args.backend}).")
@@ -430,6 +448,10 @@ def _handle_image(args: argparse.Namespace) -> int:
             print(
                 f"  Face #{idx}: Box(x={box.x}, y={box.y}, w={box.width}, h={box.height}), Conf={face.confidence:.1%}"
             )
+            if face.face_shape is not None:
+                shape_str = face.face_shape.label.upper()
+                fit_str = f"{face.face_shape.fit_score:.1%}"
+                print(f"    Shape: {shape_str} (Fit: {fit_str})")
 
         if args.output:
             saved_path = result.save(
@@ -438,6 +460,7 @@ def _handle_image(args: argparse.Namespace) -> int:
                 color=args.color,
                 thickness=args.thickness,
                 show_confidence=args.show_confidence,
+                show_face_shape=analyze_shape,
             )
             print(f"Saved annotated image to: '{saved_path}'")
 
@@ -456,6 +479,7 @@ def _handle_image(args: argparse.Namespace) -> int:
                 color=args.color,
                 thickness=args.thickness,
                 show_confidence=args.show_confidence,
+                show_face_shape=analyze_shape,
             )
 
         return 0
@@ -499,6 +523,7 @@ def _handle_batch(args: argparse.Namespace) -> int:
             recursive=args.recursive,
             progress_callback=progress_cb if not args.quiet else None,
             keep_images=bool(args.output or args.crop_dir),
+            analyze_face_shape=getattr(args, "face_shape", False),
         )
 
         # Output annotations if output directory requested

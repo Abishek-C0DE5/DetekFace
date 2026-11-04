@@ -24,6 +24,7 @@ from detekface.exceptions import (
     NoFaceDetectedError,
 )
 from detekface.types import DetectionResult, FaceCapture
+from detekface.face_shape import TemporalShapeTracker, draw_face_shape_overlay
 
 
 class CameraSession:
@@ -59,6 +60,7 @@ class CameraSession:
         auto_open: bool = True,
         resolution: Optional[Tuple[int, int]] = None,
         input_size: Optional[Tuple[int, int]] = None,
+        analyze_face_shape: bool = False,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -66,6 +68,8 @@ class CameraSession:
         self.backend = backend
         self.window_title = window_title or "detekface - Camera Session"
         self._window_opened = False
+        self.analyze_face_shape = bool(analyze_face_shape)
+        self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
 
         if resolution is not None:
             if (
@@ -236,7 +240,10 @@ class CameraSession:
             CameraReadError: If reading a frame from the hardware fails.
         """
         clean_frame = self.read_raw()
-        result = self.detector.detect(clean_frame)
+        result = self.detector.detect(clean_frame, analyze_face_shape=self.analyze_face_shape)
+        if self.analyze_face_shape and self._shape_tracker is not None:
+            smoothed_faces = self._shape_tracker.update(result.faces)
+            result = DetectionResult(faces=smoothed_faces, image=clean_frame)
         self._latest_result = result
         return result
 
@@ -335,6 +342,10 @@ class CameraSession:
         show_confidence: bool = False,
         show_fps: bool = False,
         show_count: bool = False,
+        show_face_shape: bool = True,
+        face_shape_effect: Optional[str] = "scan",
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -359,6 +370,22 @@ class CameraSession:
             show_confidence=show_confidence,
             copy=False,
         )
+
+        if show_face_shape and self.analyze_face_shape:
+            scan_phase = (self._frames_read % 60) / 60.0
+            for face in self._latest_result.faces:
+                if face.face_shape is not None:
+                    draw_face_shape_overlay(
+                        image=display_frame,
+                        face=face,
+                        effect=face_shape_effect,
+                        scan_phase=scan_phase,
+                        color=bgr_color,
+                        thickness=valid_thickness,
+                        show_contour=show_shape_contour,
+                        show_measurements=show_shape_measurements,
+                    )
+
         if show_fps or show_count:
             draw_metrics_overlay(
                 display_frame,
@@ -418,20 +445,27 @@ def open_camera(
     auto_open: bool = True,
     resolution: Optional[Tuple[int, int]] = None,
     input_size: Optional[Tuple[int, int]] = None,
+    analyze_face_shape: bool = False,
 ) -> CameraSession:
     """Open and return a managed CameraSession context manager.
 
     Example:
         import detekface
 
-        with detekface.open_camera(camera_index=0) as session:
+        with detekface.open_camera(camera_index=0, analyze_face_shape=True) as session:
             for result in session:
                 print(f"Detected {result.count} faces")
+                for face in result.faces:
+                    print(face.face_shape.label)
                 if result.has_faces:
                     face = session.capture()
                     print(f"Captured face to {face.path}")
                     break
     """
+    kwargs = {}
+    if analyze_face_shape:
+        kwargs["analyze_face_shape"] = True
+
     return CameraSession(
         camera_index=camera_index,
         mirror=mirror,
@@ -442,6 +476,7 @@ def open_camera(
         auto_open=auto_open,
         resolution=resolution,
         input_size=input_size,
+        **kwargs,
     )
 
 
@@ -463,6 +498,11 @@ def camera(
     backend: str = "yunet",
     resolution: Optional[Tuple[int, int]] = None,
     input_size: Optional[Tuple[int, int]] = None,
+    analyze_face_shape: bool = False,
+    show_face_shape: bool = True,
+    face_shape_effect: Optional[str] = "scan",
+    show_shape_contour: bool = True,
+    show_shape_measurements: bool = False,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -489,6 +529,11 @@ def camera(
         backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
         resolution: Optional capture hardware resolution (width, height) to negotiate with camera.
         input_size: Optional inference resolution (width, height) for high-FPS detection scaling.
+        analyze_face_shape: If True, executes dense facial landmarking and geometric shape classification.
+        show_face_shape: If True and analyze_face_shape=True, renders shape classification badges.
+        face_shape_effect: Biometric visual effect ('scan' for animated laser line, or None).
+        show_shape_contour: If True, draws the facial silhouette contour mesh.
+        show_shape_measurements: If True, displays live geometric proportion ratios.
 
     Raises:
         ConfigurationError: If shape, color, thickness, or display flags are invalid.
@@ -513,6 +558,20 @@ def camera(
             message=f"show_count must be a boolean, got {type(show_count).__name__}.",
             hint="Set show_count=True or show_count=False.",
         )
+    if not isinstance(analyze_face_shape, bool):
+        raise ConfigurationError(
+            message=f"analyze_face_shape must be a boolean, got {type(analyze_face_shape).__name__}.",
+            hint="Set analyze_face_shape=True or analyze_face_shape=False.",
+        )
+    if not isinstance(show_face_shape, bool):
+        raise ConfigurationError(
+            message=f"show_face_shape must be a boolean, got {type(show_face_shape).__name__}.",
+            hint="Set show_face_shape=True or show_face_shape=False.",
+        )
+
+    session_kwargs = {}
+    if analyze_face_shape:
+        session_kwargs["analyze_face_shape"] = True
 
     session = CameraSession(
         camera_index=camera_index,
@@ -524,6 +583,7 @@ def camera(
         auto_open=False,
         resolution=resolution,
         input_size=input_size,
+        **session_kwargs,
     )
 
     feedback_text: str = ""
@@ -549,6 +609,22 @@ def camera(
                 show_confidence=show_confidence,
                 copy=False,
             )
+
+            # Render face shape scanner overlays if requested
+            if show_face_shape and analyze_face_shape:
+                scan_phase = (frames_processed % 60) / 60.0
+                for face in result.faces:
+                    if face.face_shape is not None:
+                        draw_face_shape_overlay(
+                            image=display_frame,
+                            face=face,
+                            effect=face_shape_effect,
+                            scan_phase=scan_phase,
+                            color=bgr_color,
+                            thickness=valid_thickness,
+                            show_contour=show_shape_contour,
+                            show_measurements=show_shape_measurements,
+                        )
 
             # Draw status metrics (FPS and Face count)
             if show_fps or show_count:

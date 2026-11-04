@@ -70,7 +70,14 @@ from detekface.types import (
     FaceCapture,
     FaceDetection,
     FaceLandmarks,
+    FaceShapeResult,
     Point,
+)
+from detekface.face_shape import (
+    SUPPORTED_FACE_SHAPES,
+    DenseLandmarkExtractor,
+    analyze_face_geometry,
+    draw_face_shape_overlay,
 )
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
@@ -88,6 +95,7 @@ def detect(
     cache_dir: Optional[Union[str, Path]] = None,
     backend: str = "yunet",
     input_size: Optional[Tuple[int, int]] = None,
+    analyze_face_shape: bool = False,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -100,6 +108,8 @@ def detect(
         cache_dir: Optional custom directory to store/retrieve cached models.
         backend: Detection backend ('yunet' or 'mediapipe'). Default is 'yunet'.
         input_size: Optional inference resolution tuple (width, height) for performance scaling.
+        analyze_face_shape: If True, performs dense landmark localization and geometric
+            face shape classification (oval, round, square, heart, diamond, oblong, undetermined).
 
     Returns:
         DetectionResult containing detected faces and the original BGR image.
@@ -137,7 +147,7 @@ def detect(
             )
         _detector_cache[cache_key] = detector
 
-    return detector.detect(image)
+    return detector.detect(image, analyze_face_shape=analyze_face_shape)
 
 
 def detect_many(
@@ -154,6 +164,7 @@ def detect_many(
     recursive: bool = False,
     keep_images: bool = True,
     input_size: Optional[Tuple[int, int]] = None,
+    analyze_face_shape: bool = False,
 ) -> BatchDetectionResult:
     """Detect faces across a batch of images or an image directory.
 
@@ -172,6 +183,7 @@ def detect_many(
         recursive: If True, scans subdirectories when a directory path is passed.
         keep_images: If False, drops heavy image pixel arrays from returned results to conserve RAM.
         input_size: Optional inference resolution tuple (width, height) for performance scaling.
+        analyze_face_shape: If True, executes face shape analysis on all detected faces.
 
     Returns:
         BatchDetectionResult containing ordered BatchItemResult objects.
@@ -219,6 +231,7 @@ def detect_many(
         progress_callback=progress_callback,
         recursive=recursive,
         keep_images=keep_images,
+        analyze_face_shape=analyze_face_shape,
     )
 
 
@@ -251,6 +264,11 @@ __all__: List[str] = [
     "FaceLandmarks",
     "FaceDetection",
     "DetectionResult",
+    "FaceShapeResult",
+    "SUPPORTED_FACE_SHAPES",
+    "draw_face_shape_overlay",
+    "DenseLandmarkExtractor",
+    "analyze_face_geometry",
     "FaceCapture",
     "DetekFaceError",
     "ModelError",

@@ -1,8 +1,8 @@
 """Data structures representing detected faces, bounding boxes, landmarks, and results."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterator, List, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
@@ -201,6 +201,41 @@ class FaceLandmarks:
 
 
 @dataclass(frozen=True)
+class FaceShapeResult:
+    """Structured result of face shape classification and facial geometric analysis.
+
+    Supported shape categories:
+        - 'oval': Balanced proportions, cheekbones widest, gently curved jawline.
+        - 'round': Length and width nearly equal, soft curved angles, rounded jaw.
+        - 'square': Strong angular jawline, jaw width comparable to cheekbones and forehead.
+        - 'heart': Broad forehead and prominent cheekbones tapering to a narrow chin.
+        - 'diamond': Cheekbones widest with narrower forehead and tapering chin.
+        - 'oblong': Noticeably longer face length with uniform width.
+        - 'undetermined': Analysis uncertain due to extreme pose, occlusion, or low resolution.
+
+    Attributes:
+        label: Classified face shape category name.
+        fit_score: Heuristic geometric fit score (0.0 to 1.0) indicating classification strength.
+        alternatives: Relative heuristic fit scores for candidate shape categories.
+        measurements: Geometric dimensions (pixels) and proportional ratios.
+        quality_status: Reliability assessment ('good', 'warning', 'rejected', etc.).
+        warnings: List of cautionary notes explaining degraded accuracy or undetermined status.
+    """
+
+    label: str
+    fit_score: float
+    alternatives: Dict[str, float]
+    measurements: Dict[str, float]
+    quality_status: str = "good"
+    warnings: List[str] = field(default_factory=list)
+
+    @property
+    def reasons(self) -> List[str]:
+        """Alias for warnings."""
+        return self.warnings
+
+
+@dataclass(frozen=True)
 class FaceDetection:
     """A single face detected in an image.
 
@@ -208,11 +243,15 @@ class FaceDetection:
         bbox: The bounding box encompassing the face.
         confidence: Detection score between 0.0 and 1.0.
         landmarks: 5 facial key points if available, otherwise None.
+        face_shape: FaceShapeResult if analyze_face_shape=True, otherwise None.
+        dense_landmarks: Sequence of dense facial keypoints (e.g. 478 points) if extracted, otherwise None.
     """
 
     bbox: BoundingBox
     confidence: float
     landmarks: Optional[FaceLandmarks] = None
+    face_shape: Optional[FaceShapeResult] = None
+    dense_landmarks: Optional[List[Point]] = None
 
     @property
     def box(self) -> BoundingBox:
@@ -309,6 +348,9 @@ class DetectionResult:
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_face_shape: bool = False,
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -317,6 +359,9 @@ class DetectionResult:
              color: RGB hex code (e.g. '#00FF88'), color name ('cyan', 'green', etc.), or RGB tuple.
              thickness: Line stroke thickness in pixels (default 3).
              show_confidence: Whether to draw confidence percentage badges near each face.
+             show_face_shape: Whether to draw face shape classification badge and biometric overlays.
+             show_shape_contour: Whether to draw the facial silhouette contour mesh.
+             show_shape_measurements: Whether to display key geometric measurement ratios.
 
         Returns:
              A new NumPy array (BGR uint8) containing the annotated image with overlays.
@@ -327,9 +372,9 @@ class DetectionResult:
                 hint="Verify that the detection result contains valid image data.",
             )
 
-        from detekface.drawing import draw_faces
+        from detekface.drawing import draw_faces, parse_color_to_bgr
 
-        return draw_faces(
+        annotated = draw_faces(
             image=self.image,
             faces=self.faces,
             shape=shape,
@@ -338,6 +383,24 @@ class DetectionResult:
             show_confidence=show_confidence,
             copy=True,
         )
+
+        if show_face_shape:
+            from detekface.face_shape import draw_face_shape_overlay
+
+            bgr_col = parse_color_to_bgr(color)
+            for face in self.faces:
+                if face.face_shape is not None:
+                    draw_face_shape_overlay(
+                        image=annotated,
+                        face=face,
+                        effect=None,
+                        color=bgr_col,
+                        thickness=thickness,
+                        show_contour=show_shape_contour,
+                        show_measurements=show_shape_measurements,
+                    )
+
+        return annotated
 
     def draw(
         self,
@@ -382,6 +445,9 @@ class DetectionResult:
         thickness: int = 3,
         show_confidence: bool = False,
         delay: int = 0,
+        show_face_shape: bool = False,
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -393,6 +459,9 @@ class DetectionResult:
             show_confidence: Whether to display detection confidence labels.
             delay: Milliseconds to wait before closing (if > 0). Default is 0, which
                    waits until the user presses a key or closes the window.
+            show_face_shape: Whether to render face shape classification overlays.
+            show_shape_contour: Whether to render facial silhouette contour mesh.
+            show_shape_measurements: Whether to print key proportion ratios.
 
         Returns:
             The integer keycode of the pressed key, or -1 if the window was closed.
@@ -402,6 +471,9 @@ class DetectionResult:
             color=color,
             thickness=thickness,
             show_confidence=show_confidence,
+            show_face_shape=show_face_shape,
+            show_shape_contour=show_shape_contour,
+            show_shape_measurements=show_shape_measurements,
         )
 
         try:
@@ -442,6 +514,9 @@ class DetectionResult:
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_face_shape: bool = False,
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -451,6 +526,9 @@ class DetectionResult:
             color: Overlay color name, hex string, or RGB tuple.
             thickness: Stroke thickness in pixels.
             show_confidence: Whether to draw confidence scores.
+            show_face_shape: Whether to render face shape classification overlays.
+            show_shape_contour: Whether to render facial silhouette contour mesh.
+            show_shape_measurements: Whether to print key proportion ratios.
 
         Returns:
             The resolved Path to the saved image file.
@@ -466,6 +544,9 @@ class DetectionResult:
             color=color,
             thickness=thickness,
             show_confidence=show_confidence,
+            show_face_shape=show_face_shape,
+            show_shape_contour=show_shape_contour,
+            show_shape_measurements=show_shape_measurements,
         )
 
         try:

@@ -83,6 +83,19 @@ MEDIAPIPE_MODELS: Dict[str, ModelMetadata] = {
             "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
         ),
     ),
+    "face_landmarker": ModelMetadata(
+        name="face_landmarker",
+        filename="face_landmarker.task",
+        sha256="64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff",
+        size_bytes=3758596,
+        min_opencv_version="4.5.0",
+        license="Apache-2.0",
+        author="Google MediaPipe Authors",
+        description="MediaPipe Face Landmarker model bundle (478 dense landmarks) in task format.",
+        urls=(
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        ),
+    ),
 }
 
 # Alias mapping for user convenience
@@ -334,8 +347,9 @@ def resolve_mediapipe_model(
     cache_dir: Optional[Union[str, Path]] = None,
     force_download: bool = False,
     verify_checksum: bool = True,
+    model_name: str = "blazeface_short_range",
 ) -> Path:
-    """Resolve a valid local MediaPipe BlazeFace model file path."""
+    """Resolve a valid local MediaPipe model file path (BlazeFace detector or Face Landmarker)."""
     if model is not None:
         p = Path(model).expanduser()
         if p.is_file():
@@ -343,7 +357,13 @@ def resolve_mediapipe_model(
                 raise ModelCorruptionError(f"Model file '{p}' is empty (0 bytes).")
             return p.resolve()
 
-    metadata = MEDIAPIPE_MODELS["blazeface_short_range"]
+    if model_name not in MEDIAPIPE_MODELS:
+        raise ModelNotFoundError(
+            message=f"Unknown MediaPipe model identifier: '{model_name}'.",
+            hint=f"Available models are: {', '.join(sorted(MEDIAPIPE_MODELS.keys()))}.",
+        )
+
+    metadata = MEDIAPIPE_MODELS[model_name]
     base_cache = Path(cache_dir).expanduser().resolve() if cache_dir else get_cache_dir()
     base_cache.mkdir(parents=True, exist_ok=True)
     destination = base_cache / metadata.filename

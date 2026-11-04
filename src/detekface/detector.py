@@ -273,6 +273,7 @@ class FaceDetector:
         self._confidence_threshold = float(confidence_threshold)
         self._nms_threshold = float(nms_threshold)
         self._top_k = int(top_k)
+        self._cache_dir = cache_dir
 
         self._backend = get_backend(
             backend=backend,
@@ -317,11 +318,18 @@ class FaceDetector:
         """Configured inference resolution (width, height), or None for native resolution."""
         return self._input_size
 
-    def detect(self, image: Union[str, Path, np.ndarray]) -> DetectionResult:
+    def detect(
+        self,
+        image: Union[str, Path, np.ndarray],
+        analyze_face_shape: bool = False,
+    ) -> DetectionResult:
         """Perform face detection on a single image.
 
         Args:
             image: A filesystem path to an image file, or a NumPy array in BGR format.
+            analyze_face_shape: If True, performs dense facial landmark localization and
+                computes geometric face shape analysis (oval, round, square, heart, diamond,
+                oblong, undetermined) on all detected faces.
 
         Returns:
             DetectionResult containing detected FaceDetection instances and the original BGR image.
@@ -345,6 +353,13 @@ class FaceDetector:
         else:
             faces = self._backend.detect(bgr_image)
 
+        if analyze_face_shape:
+            from detekface.face_shape import DenseLandmarkExtractor, match_and_attach_face_shapes
+
+            extractor = DenseLandmarkExtractor.get_default(cache_dir=self._cache_dir)
+            landmark_sets = extractor.extract(bgr_image)
+            faces = match_and_attach_face_shapes(faces, landmark_sets, image_shape=(height, width))
+
         return DetectionResult(faces=faces, image=bgr_image)
 
     def detect_many(
@@ -354,6 +369,7 @@ class FaceDetector:
         progress_callback: Optional[Callable] = None,
         recursive: bool = False,
         keep_images: bool = True,
+        analyze_face_shape: bool = False,
     ):
         """Perform face detection across multiple images or a directory.
 
@@ -363,6 +379,7 @@ class FaceDetector:
             progress_callback: Optional callable invoked after each processed image.
             recursive: If True and directory is passed, recursively scan subdirectories.
             keep_images: If False, drops heavy image arrays from returned results to save memory.
+            analyze_face_shape: If True, executes face shape analysis on all detected faces.
 
         Returns:
             BatchDetectionResult: List of BatchItemResult objects preserving input ordering.
@@ -376,4 +393,5 @@ class FaceDetector:
             progress_callback=progress_callback,
             recursive=recursive,
             keep_images=keep_images,
+            analyze_face_shape=analyze_face_shape,
         )

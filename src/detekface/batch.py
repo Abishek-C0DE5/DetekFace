@@ -174,6 +174,7 @@ def run_batch_detection(
     progress_callback: Optional[Callable] = None,
     recursive: bool = False,
     keep_images: bool = True,
+    analyze_face_shape: bool = False,
 ) -> BatchDetectionResult:
     """Execute sequential batch face detection over resolved inputs.
 
@@ -185,6 +186,7 @@ def run_batch_detection(
         progress_callback: Optional callable called after processing each image.
         recursive: Whether to search subdirectories when a directory is passed.
         keep_images: If False, discards pixel arrays from DetectionResult to save RAM.
+        analyze_face_shape: If True, executes face shape analysis on all detected faces.
 
     Returns:
         BatchDetectionResult containing ordered BatchItemResult items.
@@ -195,7 +197,10 @@ def run_batch_detection(
 
     for idx, input_item in enumerate(inputs, start=1):
         try:
-            det_result = detector.detect(input_item)
+            if analyze_face_shape:
+                det_result = detector.detect(input_item, analyze_face_shape=True)
+            else:
+                det_result = detector.detect(input_item)
             if not keep_images:
                 det_result = DetectionResult(
                     faces=det_result.faces,
