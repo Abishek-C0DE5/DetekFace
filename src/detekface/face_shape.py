@@ -480,6 +480,12 @@ class TemporalShapeTracker:
         self._next_track_id = 0
         self._frame_index = 0
 
+    def reset(self) -> None:
+        """Reset internal track state and counters."""
+        self._tracks.clear()
+        self._next_track_id = 0
+        self._frame_index = 0
+
     def _compute_iou(self, b1: BoundingBox, b2: BoundingBox) -> float:
         x1 = max(b1.x, b2.x)
         y1 = max(b1.y, b2.y)
