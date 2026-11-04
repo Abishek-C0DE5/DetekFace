@@ -79,9 +79,24 @@ from detekface.face_shape import (
     analyze_face_geometry,
     draw_face_shape_overlay,
 )
+from detekface.mesh import (
+    FACEMESH_CONTOURS,
+    FACEMESH_FACE_OVAL,
+    FACEMESH_LEFT_EYE,
+    FACEMESH_LEFT_EYEBROW,
+    FACEMESH_LIPS,
+    FACEMESH_NOSE,
+    FACEMESH_RIGHT_EYE,
+    FACEMESH_RIGHT_EYEBROW,
+    SUPPORTED_MESH_REGIONS,
+    FaceMeshRenderer,
+    convert_landmarks_to_pixels,
+    draw_facial_mesh,
+    draw_face_meshes,
+)
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
-__version__: str = "0.1.0"
+__version__: str = "0.2.0"
 
 _detector_cache: Dict[Tuple, FaceDetector] = {}
 
@@ -269,6 +284,19 @@ __all__: List[str] = [
     "draw_face_shape_overlay",
     "DenseLandmarkExtractor",
     "analyze_face_geometry",
+    "FaceMeshRenderer",
+    "draw_facial_mesh",
+    "draw_face_meshes",
+    "convert_landmarks_to_pixels",
+    "SUPPORTED_MESH_REGIONS",
+    "FACEMESH_CONTOURS",
+    "FACEMESH_FACE_OVAL",
+    "FACEMESH_LEFT_EYE",
+    "FACEMESH_RIGHT_EYE",
+    "FACEMESH_LEFT_EYEBROW",
+    "FACEMESH_RIGHT_EYEBROW",
+    "FACEMESH_LIPS",
+    "FACEMESH_NOSE",
     "FaceCapture",
     "DetekFaceError",
     "ModelError",

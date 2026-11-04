@@ -130,6 +130,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable real-time biometric face shape scanner and HUD overlays.",
     )
+    p_cam.add_argument(
+        "--mesh",
+        action="store_true",
+        help="Display real-time dense facial landmark wireframe mesh overlay.",
+    )
     p_cam.set_defaults(func=_handle_camera)
 
     # -------------------------------------------------------------------------
@@ -399,7 +404,8 @@ def _handle_camera(args: argparse.Namespace) -> int:
             window_title=args.window_title,
             max_frames=args.max_frames,
             backend=args.backend,
-            analyze_face_shape=getattr(args, "face_shape", False),
+            analyze_face_shape=getattr(args, "face_shape", False) or getattr(args, "mesh", False),
+            show_mesh=getattr(args, "mesh", False),
         )
         return 0
     except DetekFaceError as err:

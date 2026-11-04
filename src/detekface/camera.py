@@ -346,6 +346,11 @@ class CameraSession:
         face_shape_effect: Optional[str] = "scan",
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: int = 1,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: bool = False,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -370,6 +375,20 @@ class CameraSession:
             show_confidence=show_confidence,
             copy=False,
         )
+
+        if show_mesh:
+            from detekface.mesh import draw_face_meshes
+
+            m_col = parse_color_to_bgr(mesh_color) if mesh_color is not None else bgr_color
+            draw_face_meshes(
+                display_frame,
+                self._latest_result.faces,
+                color=m_col,
+                thickness=mesh_thickness,
+                draw_points=mesh_draw_points,
+                regions=mesh_regions,
+                copy=False,
+            )
 
         if show_face_shape and self.analyze_face_shape:
             scan_phase = (self._frames_read % 60) / 60.0
@@ -503,6 +522,11 @@ def camera(
     face_shape_effect: Optional[str] = "scan",
     show_shape_contour: bool = True,
     show_shape_measurements: bool = False,
+    show_mesh: bool = False,
+    mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+    mesh_thickness: int = 1,
+    mesh_regions: Optional[Sequence[str]] = None,
+    mesh_draw_points: bool = False,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -568,6 +592,14 @@ def camera(
             message=f"show_face_shape must be a boolean, got {type(show_face_shape).__name__}.",
             hint="Set show_face_shape=True or show_face_shape=False.",
         )
+    if not isinstance(show_mesh, bool):
+        raise ConfigurationError(
+            message=f"show_mesh must be a boolean, got {type(show_mesh).__name__}.",
+            hint="Set show_mesh=True or show_mesh=False.",
+        )
+
+    if show_mesh:
+        analyze_face_shape = True
 
     session_kwargs = {}
     if analyze_face_shape:
@@ -609,6 +641,21 @@ def camera(
                 show_confidence=show_confidence,
                 copy=False,
             )
+
+            # Render dense facial mesh wireframe if requested
+            if show_mesh:
+                from detekface.mesh import draw_face_meshes
+
+                m_col = parse_color_to_bgr(mesh_color) if mesh_color is not None else bgr_color
+                draw_face_meshes(
+                    display_frame,
+                    result.faces,
+                    color=m_col,
+                    thickness=mesh_thickness,
+                    draw_points=mesh_draw_points,
+                    regions=mesh_regions,
+                    copy=False,
+                )
 
             # Render face shape scanner overlays if requested
             if show_face_shape and analyze_face_shape:

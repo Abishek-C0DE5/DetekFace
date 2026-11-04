@@ -351,6 +351,11 @@ class DetectionResult:
         show_face_shape: bool = False,
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: int = 1,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: bool = False,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -362,6 +367,11 @@ class DetectionResult:
              show_face_shape: Whether to draw face shape classification badge and biometric overlays.
              show_shape_contour: Whether to draw the facial silhouette contour mesh.
              show_shape_measurements: Whether to display key geometric measurement ratios.
+             show_mesh: Whether to render the dense facial landmark wireframe mesh.
+             mesh_color: Color for facial mesh lines (defaults to main overlay color).
+             mesh_thickness: Line stroke thickness for facial mesh (default 1).
+             mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', 'lips', etc.).
+             mesh_draw_points: Whether to render vertex keypoint dots.
 
         Returns:
              A new NumPy array (BGR uint8) containing the annotated image with overlays.
@@ -383,6 +393,20 @@ class DetectionResult:
             show_confidence=show_confidence,
             copy=True,
         )
+
+        if show_mesh:
+            from detekface.mesh import draw_face_meshes
+
+            m_col = mesh_color if mesh_color is not None else color
+            annotated = draw_face_meshes(
+                image=annotated,
+                faces=self.faces,
+                color=m_col,
+                thickness=mesh_thickness,
+                draw_points=mesh_draw_points,
+                regions=mesh_regions,
+                copy=False,
+            )
 
         if show_face_shape:
             from detekface.face_shape import draw_face_shape_overlay
@@ -448,6 +472,11 @@ class DetectionResult:
         show_face_shape: bool = False,
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: int = 1,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: bool = False,
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -462,6 +491,11 @@ class DetectionResult:
             show_face_shape: Whether to render face shape classification overlays.
             show_shape_contour: Whether to render facial silhouette contour mesh.
             show_shape_measurements: Whether to print key proportion ratios.
+            show_mesh: Whether to render dense facial landmark wireframe mesh.
+            mesh_color: Color for facial mesh lines.
+            mesh_thickness: Line stroke thickness for facial mesh.
+            mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', etc.).
+            mesh_draw_points: Whether to render vertex keypoint dots.
 
         Returns:
             The integer keycode of the pressed key, or -1 if the window was closed.
@@ -474,6 +508,11 @@ class DetectionResult:
             show_face_shape=show_face_shape,
             show_shape_contour=show_shape_contour,
             show_shape_measurements=show_shape_measurements,
+            show_mesh=show_mesh,
+            mesh_color=mesh_color,
+            mesh_thickness=mesh_thickness,
+            mesh_regions=mesh_regions,
+            mesh_draw_points=mesh_draw_points,
         )
 
         try:
@@ -517,6 +556,11 @@ class DetectionResult:
         show_face_shape: bool = False,
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: int = 1,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: bool = False,
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -529,6 +573,11 @@ class DetectionResult:
             show_face_shape: Whether to render face shape classification overlays.
             show_shape_contour: Whether to render facial silhouette contour mesh.
             show_shape_measurements: Whether to print key proportion ratios.
+            show_mesh: Whether to render dense facial landmark wireframe mesh.
+            mesh_color: Color for facial mesh lines.
+            mesh_thickness: Line stroke thickness for facial mesh.
+            mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', etc.).
+            mesh_draw_points: Whether to render vertex keypoint dots.
 
         Returns:
             The resolved Path to the saved image file.
@@ -547,6 +596,11 @@ class DetectionResult:
             show_face_shape=show_face_shape,
             show_shape_contour=show_shape_contour,
             show_shape_measurements=show_shape_measurements,
+            show_mesh=show_mesh,
+            mesh_color=mesh_color,
+            mesh_thickness=mesh_thickness,
+            mesh_regions=mesh_regions,
+            mesh_draw_points=mesh_draw_points,
         )
 
         try:

@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import pytest
 
-from detekface import BoundingBox, DetectionResult, FaceDetection
+from detekface import BoundingBox, DetectionResult, FaceDetection, __version__
 from detekface.cli import main
 
 
@@ -43,7 +43,7 @@ def test_cli_version(capsys):
     code = main(["--version"])
     assert code == 0
     captured = capsys.readouterr()
-    assert "detekface 0.1.0" in captured.out
+    assert f"detekface {__version__}" in captured.out
 
 
 def test_cli_subcommand_helps(capsys):
