@@ -471,7 +471,7 @@ def draw_faces(
         NumPy array containing all rendered face overlays.
     """
     valid_shape, valid_thickness = validate_render_parameters(shape, thickness)
-    bgr_color = parse_color_to_bgr(color)
+    _ = parse_color_to_bgr(color)
 
     out = image.copy() if copy else image
     for face in faces:
@@ -479,7 +479,7 @@ def draw_faces(
             out,
             face,
             shape=valid_shape,
-            color=bgr_color,
+            color=color,
             thickness=valid_thickness,
             show_confidence=show_confidence,
             copy=False,

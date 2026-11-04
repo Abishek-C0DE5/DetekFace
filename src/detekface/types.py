@@ -352,10 +352,11 @@ class DetectionResult:
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
         show_mesh: bool = False,
+        mesh_style: str = "wireframe",
         mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
-        mesh_thickness: int = 1,
+        mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
-        mesh_draw_points: bool = False,
+        mesh_draw_points: Optional[bool] = None,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -368,8 +369,9 @@ class DetectionResult:
              show_shape_contour: Whether to draw the facial silhouette contour mesh.
              show_shape_measurements: Whether to display key geometric measurement ratios.
              show_mesh: Whether to render the dense facial landmark wireframe mesh.
+             mesh_style: Visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
              mesh_color: Color for facial mesh lines (defaults to main overlay color).
-             mesh_thickness: Line stroke thickness for facial mesh (default 1).
+             mesh_thickness: Line stroke thickness for facial mesh.
              mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', 'lips', etc.).
              mesh_draw_points: Whether to render vertex keypoint dots.
 
@@ -401,6 +403,7 @@ class DetectionResult:
             annotated = draw_face_meshes(
                 image=annotated,
                 faces=self.faces,
+                style=mesh_style,
                 color=m_col,
                 thickness=mesh_thickness,
                 draw_points=mesh_draw_points,
@@ -473,10 +476,11 @@ class DetectionResult:
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
         show_mesh: bool = False,
+        mesh_style: str = "wireframe",
         mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
-        mesh_thickness: int = 1,
+        mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
-        mesh_draw_points: bool = False,
+        mesh_draw_points: Optional[bool] = None,
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -492,6 +496,7 @@ class DetectionResult:
             show_shape_contour: Whether to render facial silhouette contour mesh.
             show_shape_measurements: Whether to print key proportion ratios.
             show_mesh: Whether to render dense facial landmark wireframe mesh.
+            mesh_style: Visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
             mesh_color: Color for facial mesh lines.
             mesh_thickness: Line stroke thickness for facial mesh.
             mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', etc.).
@@ -509,6 +514,7 @@ class DetectionResult:
             show_shape_contour=show_shape_contour,
             show_shape_measurements=show_shape_measurements,
             show_mesh=show_mesh,
+            mesh_style=mesh_style,
             mesh_color=mesh_color,
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,
@@ -557,10 +563,11 @@ class DetectionResult:
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
         show_mesh: bool = False,
+        mesh_style: str = "wireframe",
         mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
-        mesh_thickness: int = 1,
+        mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
-        mesh_draw_points: bool = False,
+        mesh_draw_points: Optional[bool] = None,
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -574,6 +581,7 @@ class DetectionResult:
             show_shape_contour: Whether to render facial silhouette contour mesh.
             show_shape_measurements: Whether to print key proportion ratios.
             show_mesh: Whether to render dense facial landmark wireframe mesh.
+            mesh_style: Visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
             mesh_color: Color for facial mesh lines.
             mesh_thickness: Line stroke thickness for facial mesh.
             mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', etc.).
@@ -597,6 +605,7 @@ class DetectionResult:
             show_shape_contour=show_shape_contour,
             show_shape_measurements=show_shape_measurements,
             show_mesh=show_mesh,
+            mesh_style=mesh_style,
             mesh_color=mesh_color,
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,

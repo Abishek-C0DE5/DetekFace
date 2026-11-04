@@ -18,7 +18,8 @@ import numpy as np
 import pytest
 
 from detekface.capture import capture
-from detekface.exceptions import InvalidImageError
+from detekface.drawing import SUPPORTED_SHAPES
+from detekface.exceptions import InvalidImageError, InvalidSettingError
 from detekface.mesh import (
     FACEMESH_CONTOURS,
     FACEMESH_FACE_OVAL,
@@ -29,10 +30,12 @@ from detekface.mesh import (
     FACEMESH_RIGHT_EYE,
     FACEMESH_RIGHT_EYEBROW,
     SUPPORTED_MESH_REGIONS,
+    SUPPORTED_MESH_STYLES,
     FaceMeshRenderer,
     convert_landmarks_to_pixels,
     draw_face_meshes,
     draw_facial_mesh,
+    validate_mesh_style,
 )
 from detekface.types import BoundingBox, DetectionResult, FaceDetection, Point
 
@@ -314,4 +317,156 @@ class TestMultipleFacesMesh:
         saved_path = result.save(out_file, show_mesh=True, mesh_color="#00FF00")
         assert saved_path.exists()
         assert saved_path.stat().st_size > 0
+
+
+class TestMeshStyles:
+    """Milestone 2 tests: customizable facial mesh visualization styles."""
+
+    def test_supported_mesh_styles_constant(self):
+        """Verify all 5 required styles are declared in SUPPORTED_MESH_STYLES."""
+        expected = {"wireframe", "neon", "minimal", "contour", "points"}
+        assert set(SUPPORTED_MESH_STYLES) == expected
+
+    @pytest.mark.parametrize("invalid_style", ["glowing", "hologram", "invalid", "", "3d_reconstruction"])
+    def test_invalid_styles_raise_setting_error(self, invalid_style: str):
+        """Verify invalid style strings raise actionable InvalidSettingError."""
+        with pytest.raises(InvalidSettingError) as exc_info:
+            validate_mesh_style(invalid_style)
+        assert "Unsupported mesh style" in str(exc_info.value) or "Mesh style must be a string" in str(exc_info.value)
+
+        with pytest.raises(InvalidSettingError):
+            FaceMeshRenderer(style=invalid_style)
+
+    @pytest.mark.parametrize("style", ["wireframe", "neon", "minimal", "contour", "points"])
+    def test_each_style_renders_independently(
+        self, style: str, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify each of the 5 styles renders without errors and draws distinct visual elements."""
+        out = draw_facial_mesh(
+            blank_image_bgr,
+            synthetic_478_landmarks,
+            style=style,
+            color="#00FF88",
+            copy=True,
+        )
+        assert out.shape == blank_image_bgr.shape
+        # Pixels must have been drawn
+        nonzero_pixels = np.count_nonzero(out)
+        assert nonzero_pixels > 0, f"Style '{style}' should draw non-zero pixels"
+
+    def test_points_style_renders_only_dots_without_connecting_lines(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify points style renders dots and fewer pixels than connected wireframe."""
+        out_points = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="points", copy=True)
+        out_wireframe = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="wireframe", copy=True)
+
+        # Wireframe connects lines so it has significantly more non-zero pixels than points alone
+        assert np.count_nonzero(out_points) > 0
+        assert np.count_nonzero(out_wireframe) > np.count_nonzero(out_points)
+
+    def test_neon_style_highlights_selected_landmarks(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify neon style renders highlighted accent points in addition to contour lines."""
+        out_neon = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="neon", color="#00FF88", copy=True)
+        out_minimal = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="minimal", color="#00FF88", copy=True)
+
+        # Neon emphasizes lines + anchor dots, modifying more pixels than minimal
+        assert np.count_nonzero(out_neon) > np.count_nonzero(out_minimal)
+
+    def test_contour_style_renders_facial_outlines(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify contour style renders anatomical boundaries."""
+        out_contour = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="contour", copy=True)
+        assert np.count_nonzero(out_contour) > 0
+
+    def test_custom_color_and_thickness_across_styles(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify custom colors and stroke thicknesses are respected."""
+        for style in SUPPORTED_MESH_STYLES:
+            # Custom hex color
+            out_cyan = draw_facial_mesh(
+                blank_image_bgr, synthetic_478_landmarks, style=style, color="#00FFFF", thickness=1, copy=True
+            )
+            # Blue and green channels should be activated for cyan
+            assert np.count_nonzero(out_cyan[:, :, 0]) > 0
+            assert np.count_nonzero(out_cyan[:, :, 1]) > 0
+
+            # Thickness scaling
+            out_thick = draw_facial_mesh(
+                blank_image_bgr, synthetic_478_landmarks, style=style, thickness=3, copy=True
+            )
+            out_thin = draw_facial_mesh(
+                blank_image_bgr, synthetic_478_landmarks, style=style, thickness=1, copy=True
+            )
+            if style != "points":
+                assert np.count_nonzero(out_thick) > np.count_nonzero(out_thin)
+
+    def test_invalid_thickness_and_radius_raise_error(self):
+        """Verify non-positive or non-integer thickness/radius raise InvalidSettingError."""
+        with pytest.raises(InvalidSettingError):
+            FaceMeshRenderer(thickness=0)
+        with pytest.raises(InvalidSettingError):
+            FaceMeshRenderer(thickness=-2)
+        with pytest.raises(InvalidSettingError):
+            FaceMeshRenderer(point_radius=0)
+
+    def test_multiple_faces_rendered_with_styles(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify multi-face rendering works seamlessly with different styles."""
+        face1 = FaceDetection(
+            bbox=BoundingBox(x=30, y=30, width=100, height=100),
+            confidence=0.95,
+            dense_landmarks=[Point(x=p.x * 0.4, y=p.y * 0.4) for p in synthetic_478_landmarks],
+        )
+        face2 = FaceDetection(
+            bbox=BoundingBox(x=200, y=200, width=100, height=100),
+            confidence=0.93,
+            dense_landmarks=[Point(x=0.5 + p.x * 0.4, y=0.5 + p.y * 0.4) for p in synthetic_478_landmarks],
+        )
+
+        for style in SUPPORTED_MESH_STYLES:
+            out = draw_face_meshes(blank_image_bgr, [face1, face2], style=style, copy=True)
+            # Both top-left (face1) and bottom-right (face2) quadrants must have pixels
+            assert np.count_nonzero(out[:200, :200]) > 0
+            assert np.count_nonzero(out[200:, 200:]) > 0
+
+    def test_empty_landmarks_safely_handled_in_all_styles(self, blank_image_bgr: np.ndarray):
+        """Verify empty or None landmarks return unmodified image across all styles."""
+        snap = blank_image_bgr.copy()
+        for style in SUPPORTED_MESH_STYLES:
+            out1 = draw_facial_mesh(blank_image_bgr, [], style=style, copy=True)
+            out2 = draw_facial_mesh(blank_image_bgr, None, style=style, copy=True)
+            assert np.array_equal(out1, snap)
+            assert np.array_equal(out2, snap)
+
+    def test_compatibility_with_all_detection_overlay_shapes(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
+        """Verify existing overlay shapes (rectangle, corners, circle, rounded, hud) work alongside mesh styles."""
+        face = FaceDetection(
+            bbox=BoundingBox(x=50, y=50, width=100, height=100),
+            confidence=0.99,
+            dense_landmarks=synthetic_478_landmarks,
+        )
+        result = DetectionResult(faces=[face], image=blank_image_bgr.copy())
+
+        for overlay_shape in SUPPORTED_SHAPES:
+            for mesh_style in SUPPORTED_MESH_STYLES:
+                annotated = result.annotate(
+                    shape=overlay_shape,
+                    show_mesh=True,
+                    mesh_style=mesh_style,
+                    color="#FF0000",
+                    mesh_color="#00FF00",
+                )
+                assert annotated.shape == blank_image_bgr.shape
+                # Both red (shape overlay) and green (mesh) channels should have pixels
+                assert np.count_nonzero(annotated[:, :, 2]) > 0  # Red
+                assert np.count_nonzero(annotated[:, :, 1]) > 0  # Green
+
 

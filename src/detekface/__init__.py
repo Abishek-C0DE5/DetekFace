@@ -89,10 +89,12 @@ from detekface.mesh import (
     FACEMESH_RIGHT_EYE,
     FACEMESH_RIGHT_EYEBROW,
     SUPPORTED_MESH_REGIONS,
+    SUPPORTED_MESH_STYLES,
     FaceMeshRenderer,
     convert_landmarks_to_pixels,
     draw_facial_mesh,
     draw_face_meshes,
+    validate_mesh_style,
 )
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
@@ -289,6 +291,8 @@ __all__: List[str] = [
     "draw_face_meshes",
     "convert_landmarks_to_pixels",
     "SUPPORTED_MESH_REGIONS",
+    "SUPPORTED_MESH_STYLES",
+    "validate_mesh_style",
     "FACEMESH_CONTOURS",
     "FACEMESH_FACE_OVAL",
     "FACEMESH_LEFT_EYE",

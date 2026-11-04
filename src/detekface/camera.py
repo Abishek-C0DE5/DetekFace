@@ -1,7 +1,7 @@
 """Live webcam capture, customizable face overlay rendering, and camera session management."""
 
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Tuple, Union
+from typing import Callable, Iterator, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
@@ -347,10 +347,11 @@ class CameraSession:
         show_shape_contour: bool = True,
         show_shape_measurements: bool = False,
         show_mesh: bool = False,
+        mesh_style: str = "wireframe",
         mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
-        mesh_thickness: int = 1,
+        mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
-        mesh_draw_points: bool = False,
+        mesh_draw_points: Optional[bool] = None,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -383,6 +384,7 @@ class CameraSession:
             draw_face_meshes(
                 display_frame,
                 self._latest_result.faces,
+                style=mesh_style,
                 color=m_col,
                 thickness=mesh_thickness,
                 draw_points=mesh_draw_points,
@@ -523,10 +525,11 @@ def camera(
     show_shape_contour: bool = True,
     show_shape_measurements: bool = False,
     show_mesh: bool = False,
+    mesh_style: str = "wireframe",
     mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
-    mesh_thickness: int = 1,
+    mesh_thickness: Optional[int] = None,
     mesh_regions: Optional[Sequence[str]] = None,
-    mesh_draw_points: bool = False,
+    mesh_draw_points: Optional[bool] = None,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -598,6 +601,10 @@ def camera(
             hint="Set show_mesh=True or show_mesh=False.",
         )
 
+    from detekface.mesh import validate_mesh_style
+
+    valid_mesh_style = validate_mesh_style(mesh_style)
+
     if show_mesh:
         analyze_face_shape = True
 
@@ -650,6 +657,7 @@ def camera(
                 draw_face_meshes(
                     display_frame,
                     result.faces,
+                    style=valid_mesh_style,
                     color=m_col,
                     thickness=mesh_thickness,
                     draw_points=mesh_draw_points,
@@ -708,6 +716,22 @@ def camera(
             # Close preview on 'q', 'Q', or Escape (27)
             if key in (ord("q"), ord("Q"), 27):
                 break
+
+            # Toggle / cycle mesh visualization style on 'm' or 'M'
+            if key in (ord("m"), ord("M")):
+                from detekface.mesh import SUPPORTED_MESH_STYLES
+
+                show_mesh = True
+                curr_idx = (
+                    SUPPORTED_MESH_STYLES.index(valid_mesh_style)
+                    if valid_mesh_style in SUPPORTED_MESH_STYLES
+                    else 0
+                )
+                valid_mesh_style = SUPPORTED_MESH_STYLES[(curr_idx + 1) % len(SUPPORTED_MESH_STYLES)]
+                feedback_text = f"Mesh: {valid_mesh_style}"
+                feedback_frames = 45
+                feedback_color = (0, 255, 136)
+                print(f"[detekface] Switched mesh style to: {valid_mesh_style}")
 
             # Capture largest face on 'c' or 'C'
             if key in (ord("c"), ord("C")):

@@ -6,7 +6,7 @@ import sys
 from typing import List, Optional
 
 import detekface
-from detekface import __version__
+from detekface import SUPPORTED_MESH_STYLES, __version__
 from detekface.drawing import SUPPORTED_SHAPES
 from detekface.exceptions import DetekFaceError
 
@@ -134,6 +134,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--mesh",
         action="store_true",
         help="Display real-time dense facial landmark wireframe mesh overlay.",
+    )
+    p_cam.add_argument(
+        "--mesh-style",
+        choices=sorted(SUPPORTED_MESH_STYLES),
+        default="wireframe",
+        help="Facial mesh visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').",
     )
     p_cam.set_defaults(func=_handle_camera)
 
@@ -406,6 +412,7 @@ def _handle_camera(args: argparse.Namespace) -> int:
             backend=args.backend,
             analyze_face_shape=getattr(args, "face_shape", False) or getattr(args, "mesh", False),
             show_mesh=getattr(args, "mesh", False),
+            mesh_style=getattr(args, "mesh_style", "wireframe"),
         )
         return 0
     except DetekFaceError as err:

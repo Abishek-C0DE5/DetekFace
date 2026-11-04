@@ -21,7 +21,7 @@ import cv2
 import numpy as np
 
 from detekface.drawing import parse_color_to_bgr
-from detekface.exceptions import InvalidImageError
+from detekface.exceptions import InvalidImageError, InvalidSettingError
 from detekface.types import FaceDetection, Point
 
 # -----------------------------------------------------------------------------
@@ -102,6 +102,39 @@ SUPPORTED_MESH_REGIONS: Dict[str, Tuple[Tuple[int, int], ...]] = {
     "lips": FACEMESH_LIPS,
     "nose": FACEMESH_NOSE,
 }
+
+SUPPORTED_MESH_STYLES: Tuple[str, ...] = (
+    "wireframe",
+    "neon",
+    "minimal",
+    "contour",
+    "points",
+)
+
+# Canonical anchor keypoints emphasized in neon / cyber visualization style
+NEON_KEY_LANDMARKS: Tuple[int, ...] = (
+    10, 152, 234, 454, 33, 133, 362, 263, 1, 4, 61, 291, 0, 17, 468, 473
+)
+
+
+def validate_mesh_style(style: str) -> str:
+    """Validate mesh visualization style name.
+
+    Raises:
+        InvalidSettingError: If the style name is invalid or unsupported.
+    """
+    if not isinstance(style, str):
+        raise InvalidSettingError(
+            message=f"Mesh style must be a string, got {type(style).__name__}.",
+            hint=f"Supported mesh styles are: {sorted(SUPPORTED_MESH_STYLES)}.",
+        )
+    clean_style = style.strip().lower()
+    if clean_style not in SUPPORTED_MESH_STYLES:
+        raise InvalidSettingError(
+            message=f"Unsupported mesh style: '{style}'.",
+            hint=f"Supported mesh styles are: {sorted(SUPPORTED_MESH_STYLES)}.",
+        )
+    return clean_style
 
 
 def _extract_coord(pt: Any) -> Optional[Tuple[float, float]]:
@@ -193,36 +226,73 @@ def convert_landmarks_to_pixels(
 
 
 class FaceMeshRenderer:
-    """Configurable 2D facial landmark wireframe rendering component.
+    """Configurable 2D facial landmark wireframe and visual styling renderer.
+
+    Visualization Styles:
+        - 'wireframe': Connected canonical facial landmark wireframe lines.
+        - 'neon': Highlighted mesh lines, prominent landmark points, and emphasized contours.
+        - 'minimal': Ultra-clean, thin mesh contours with zero visual clutter.
+        - 'contour': Emphasizes primary anatomical facial contours (oval, eyes, nose, lips).
+        - 'points': Displays facial landmark dots without interconnecting lines.
 
     Attributes:
+        style: Visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
         color: Primary line color as hex string (#00FF88) or BGR tuple.
-        thickness: Line stroke width in pixels (>= 1).
+        thickness: Line stroke width in pixels (>= 1, or None for style-adaptive).
         draw_points: Whether to render circular keypoint dots at vertex positions.
-        point_radius: Radius of vertex dots in pixels.
-        point_color: Color of vertex dots (defaults to primary color).
+        point_radius: Radius of vertex dots in pixels (or None for style-adaptive).
+        point_color: Color of vertex dots.
         regions: Specific anatomical regions to render ('contours', 'eyes', 'lips', etc.).
     """
 
     def __init__(
         self,
+        style: str = "wireframe",
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
-        thickness: int = 1,
-        draw_points: bool = False,
-        point_radius: int = 1,
+        thickness: Optional[int] = None,
+        draw_points: Optional[bool] = None,
+        point_radius: Optional[int] = None,
         point_color: Optional[Union[str, Tuple[int, int, int]]] = None,
         regions: Optional[Sequence[str]] = None,
     ) -> None:
+        self.style = validate_mesh_style(style)
         self.color = parse_color_to_bgr(color)
-        self.thickness = max(1, int(thickness))
-        self.draw_points = bool(draw_points)
-        self.point_radius = max(1, int(point_radius))
-        self.point_color = parse_color_to_bgr(point_color) if point_color else self.color
 
-        self.regions = self._resolve_regions(regions)
+        if thickness is not None:
+            if not isinstance(thickness, int) or isinstance(thickness, bool) or thickness < 1:
+                raise InvalidSettingError(
+                    message=f"Mesh thickness must be an integer >= 1, got: {thickness}.",
+                    hint="Use an integer such as 1, 2, or 3.",
+                )
+            self.thickness: Optional[int] = thickness
+        else:
+            self.thickness = None
 
-    def _resolve_regions(self, regions: Optional[Sequence[str]]) -> Set[Tuple[int, int]]:
+        self.draw_points = bool(draw_points) if draw_points is not None else None
+
+        if point_radius is not None:
+            if not isinstance(point_radius, int) or isinstance(point_radius, bool) or point_radius < 1:
+                raise InvalidSettingError(
+                    message=f"Mesh point_radius must be an integer >= 1, got: {point_radius}.",
+                    hint="Use an integer such as 1, 2, or 3.",
+                )
+            self.point_radius: Optional[int] = point_radius
+        else:
+            self.point_radius = None
+
+        self.point_color = parse_color_to_bgr(point_color) if point_color else None
+        self._user_regions = regions
+        self.regions = self._resolve_regions(regions, self.style)
+
+    def _resolve_regions(
+        self,
+        regions: Optional[Sequence[str]],
+        style: str,
+    ) -> Set[Tuple[int, int]]:
         """Resolve requested region names into a unified set of connection index pairs."""
+        if style == "points" and regions is None:
+            return set()
+
         if regions is None:
             return set(FACEMESH_CONTOURS)
 
@@ -265,19 +335,74 @@ class FaceMeshRenderer:
         pixel_points = convert_landmarks_to_pixels(landmarks, image_width=w, image_height=h)
         total_pts = len(pixel_points)
 
-        # 1. Draw topological connection lines
+        # Estimate face dimension from valid coordinates for adaptive scaling
+        valid_pixel_pts = [p for p in pixel_points if p is not None]
+        if valid_pixel_pts:
+            xs = [p[0] for p in valid_pixel_pts]
+            ys = [p[1] for p in valid_pixel_pts]
+            face_span = max(max(xs) - min(xs), max(ys) - min(ys))
+        else:
+            face_span = min(w, h)
+
+        # 1. Determine effective thickness
+        if self.thickness is not None:
+            line_thickness = self.thickness
+        elif self.style in ("neon", "contour"):
+            line_thickness = max(1, min(3, int(round(face_span / 180.0))))
+        elif self.style == "minimal":
+            line_thickness = 1
+        else:
+            line_thickness = 1
+
+        # 2. Determine effective draw_points flag
+        if self.draw_points is not None:
+            should_draw_points = self.draw_points
+        elif self.style in ("points", "neon"):
+            should_draw_points = True
+        else:
+            should_draw_points = False
+
+        # 3. Determine effective point radius
+        if self.point_radius is not None:
+            pt_radius = self.point_radius
+        elif self.style == "points":
+            pt_radius = max(1, min(4, int(round(face_span / 120.0))))
+        elif self.style == "neon":
+            pt_radius = max(1, min(3, int(round(face_span / 160.0))))
+        else:
+            pt_radius = 1
+
+        # 4. Determine effective point color
+        if self.point_color is not None:
+            pt_col = self.point_color
+        elif self.style == "neon":
+            pt_col = (255, 255, 255)  # Bright high-contrast white accent
+        else:
+            pt_col = self.color
+
+        # 5. Draw connection lines
         for start_idx, end_idx in self.regions:
             if start_idx < total_pts and end_idx < total_pts:
                 p1 = pixel_points[start_idx]
                 p2 = pixel_points[end_idx]
                 if p1 is not None and p2 is not None:
-                    cv2.line(out, p1, p2, self.color, self.thickness, cv2.LINE_AA)
+                    # Emphasize face oval and lips slightly in neon style
+                    if self.style == "neon" and (start_idx, end_idx) in FACEMESH_FACE_OVAL:
+                        cv2.line(out, p1, p2, self.color, line_thickness + 1, cv2.LINE_AA)
+                    else:
+                        cv2.line(out, p1, p2, self.color, line_thickness, cv2.LINE_AA)
 
-        # 2. Draw landmark points if enabled
-        if self.draw_points:
-            for pt in pixel_points:
-                if pt is not None:
-                    cv2.circle(out, pt, self.point_radius, self.point_color, -1, cv2.LINE_AA)
+        # 6. Draw landmark points
+        if should_draw_points:
+            if self.style == "neon" and self.draw_points is None:
+                # In neon style without explicit draw_points=True, emphasize key anatomical anchors
+                for idx in NEON_KEY_LANDMARKS:
+                    if idx < total_pts and pixel_points[idx] is not None:
+                        cv2.circle(out, pixel_points[idx], pt_radius + 1, pt_col, -1, cv2.LINE_AA)
+            else:
+                for pt in pixel_points:
+                    if pt is not None:
+                        cv2.circle(out, pt, pt_radius, pt_col, -1, cv2.LINE_AA)
 
         return out
 
@@ -315,10 +440,11 @@ class FaceMeshRenderer:
 def draw_facial_mesh(
     image: np.ndarray,
     landmarks: Optional[Sequence[Any]],
+    style: str = "wireframe",
     color: Union[str, Tuple[int, int, int]] = "#00FF88",
-    thickness: int = 1,
-    draw_points: bool = False,
-    point_radius: int = 1,
+    thickness: Optional[int] = None,
+    draw_points: Optional[bool] = None,
+    point_radius: Optional[int] = None,
     point_color: Optional[Union[str, Tuple[int, int, int]]] = None,
     regions: Optional[Sequence[str]] = None,
     copy: bool = True,
@@ -328,10 +454,11 @@ def draw_facial_mesh(
     Args:
         image: Source BGR image NumPy array.
         landmarks: Dense sequence of facial keypoints.
+        style: Mesh visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
         color: Wireframe stroke color (hex or RGB/BGR tuple). Default '#00FF88'.
-        thickness: Line stroke width in pixels. Default 1.
-        draw_points: Whether to render vertex points as small circles. Default False.
-        point_radius: Vertex point radius in pixels. Default 1.
+        thickness: Line stroke width in pixels.
+        draw_points: Whether to render vertex points as small circles.
+        point_radius: Vertex point radius in pixels.
         point_color: Vertex point color.
         regions: Specific anatomical regions to render ('contours', 'eyes', 'lips', etc.).
         copy: Whether to render on a copy of the image (default True, original untouched).
@@ -340,6 +467,7 @@ def draw_facial_mesh(
         Rendered BGR image NumPy array.
     """
     renderer = FaceMeshRenderer(
+        style=style,
         color=color,
         thickness=thickness,
         draw_points=draw_points,
@@ -353,10 +481,11 @@ def draw_facial_mesh(
 def draw_face_meshes(
     image: np.ndarray,
     faces: Sequence[FaceDetection],
+    style: str = "wireframe",
     color: Union[str, Tuple[int, int, int]] = "#00FF88",
-    thickness: int = 1,
-    draw_points: bool = False,
-    point_radius: int = 1,
+    thickness: Optional[int] = None,
+    draw_points: Optional[bool] = None,
+    point_radius: Optional[int] = None,
     point_color: Optional[Union[str, Tuple[int, int, int]]] = None,
     regions: Optional[Sequence[str]] = None,
     copy: bool = True,
@@ -366,6 +495,7 @@ def draw_face_meshes(
     Args:
         image: Source BGR image NumPy array.
         faces: Sequence of FaceDetection instances containing dense_landmarks.
+        style: Mesh visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
         color: Wireframe stroke color.
         thickness: Line stroke width in pixels.
         draw_points: Whether to render vertex dots.
@@ -378,6 +508,7 @@ def draw_face_meshes(
         Rendered BGR image NumPy array.
     """
     renderer = FaceMeshRenderer(
+        style=style,
         color=color,
         thickness=thickness,
         draw_points=draw_points,
