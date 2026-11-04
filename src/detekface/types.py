@@ -357,6 +357,9 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
+        live_fx_timestamp: Optional[float] = None,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -374,6 +377,9 @@ class DetectionResult:
              mesh_thickness: Line stroke thickness for facial mesh.
              mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', 'lips', etc.).
              mesh_draw_points: Whether to render vertex keypoint dots.
+             live_fx: Whether to render animated Live FX modern computer-vision scanner layer.
+             live_fx_style: Live FX animation style ('scan', 'neon', 'wireframe', 'minimal').
+             live_fx_timestamp: Optional clock timestamp in seconds for deterministic animation testing.
 
         Returns:
              A new NumPy array (BGR uint8) containing the annotated image with overlays.
@@ -408,6 +414,17 @@ class DetectionResult:
                 thickness=mesh_thickness,
                 draw_points=mesh_draw_points,
                 regions=mesh_regions,
+                copy=False,
+            )
+
+        if live_fx:
+            from detekface.live_fx import LiveFXRenderer
+
+            fx_renderer = LiveFXRenderer(style=live_fx_style, color=color)
+            annotated = fx_renderer.render(
+                annotated,
+                faces=self.faces,
+                timestamp=live_fx_timestamp,
                 copy=False,
             )
 
@@ -481,6 +498,9 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
+        live_fx_timestamp: Optional[float] = None,
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -519,6 +539,9 @@ class DetectionResult:
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,
             mesh_draw_points=mesh_draw_points,
+            live_fx=live_fx,
+            live_fx_style=live_fx_style,
+            live_fx_timestamp=live_fx_timestamp,
         )
 
         try:
@@ -568,6 +591,9 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
+        live_fx_timestamp: Optional[float] = None,
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -610,6 +636,9 @@ class DetectionResult:
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,
             mesh_draw_points=mesh_draw_points,
+            live_fx=live_fx,
+            live_fx_style=live_fx_style,
+            live_fx_timestamp=live_fx_timestamp,
         )
 
         try:

@@ -96,6 +96,11 @@ from detekface.mesh import (
     draw_face_meshes,
     validate_mesh_style,
 )
+from detekface.live_fx import (
+    LiveFXRenderer,
+    SUPPORTED_LIVE_FX_STYLES,
+    validate_live_fx_style,
+)
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
 __version__: str = "0.2.0"
@@ -293,6 +298,9 @@ __all__: List[str] = [
     "SUPPORTED_MESH_REGIONS",
     "SUPPORTED_MESH_STYLES",
     "validate_mesh_style",
+    "LiveFXRenderer",
+    "SUPPORTED_LIVE_FX_STYLES",
+    "validate_live_fx_style",
     "FACEMESH_CONTOURS",
     "FACEMESH_FACE_OVAL",
     "FACEMESH_LEFT_EYE",

@@ -6,7 +6,7 @@ import sys
 from typing import List, Optional
 
 import detekface
-from detekface import SUPPORTED_MESH_STYLES, __version__
+from detekface import SUPPORTED_LIVE_FX_STYLES, SUPPORTED_MESH_STYLES, __version__
 from detekface.drawing import SUPPORTED_SHAPES
 from detekface.exceptions import DetekFaceError
 
@@ -140,6 +140,17 @@ def build_parser() -> argparse.ArgumentParser:
         choices=sorted(SUPPORTED_MESH_STYLES),
         default="wireframe",
         help="Facial mesh visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').",
+    )
+    p_cam.add_argument(
+        "--live-fx",
+        action="store_true",
+        help="Enable animated Live FX modern computer-vision scanner overlay.",
+    )
+    p_cam.add_argument(
+        "--live-fx-style",
+        choices=sorted(SUPPORTED_LIVE_FX_STYLES),
+        default="scan",
+        help="Live FX animation style ('scan', 'neon', 'wireframe', 'minimal').",
     )
     p_cam.set_defaults(func=_handle_camera)
 
@@ -410,9 +421,15 @@ def _handle_camera(args: argparse.Namespace) -> int:
             window_title=args.window_title,
             max_frames=args.max_frames,
             backend=args.backend,
-            analyze_face_shape=getattr(args, "face_shape", False) or getattr(args, "mesh", False),
+            analyze_face_shape=(
+                getattr(args, "face_shape", False)
+                or getattr(args, "mesh", False)
+                or getattr(args, "live_fx", False)
+            ),
             show_mesh=getattr(args, "mesh", False),
             mesh_style=getattr(args, "mesh_style", "wireframe"),
+            live_fx=getattr(args, "live_fx", False),
+            live_fx_style=getattr(args, "live_fx_style", "scan"),
         )
         return 0
     except DetekFaceError as err:

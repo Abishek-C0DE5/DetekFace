@@ -530,6 +530,8 @@ def camera(
     mesh_thickness: Optional[int] = None,
     mesh_regions: Optional[Sequence[str]] = None,
     mesh_draw_points: Optional[bool] = None,
+    live_fx: bool = False,
+    live_fx_style: str = "scan",
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -605,7 +607,17 @@ def camera(
 
     valid_mesh_style = validate_mesh_style(mesh_style)
 
-    if show_mesh:
+    if not isinstance(live_fx, bool):
+        raise ConfigurationError(
+            message=f"live_fx must be a boolean, got {type(live_fx).__name__}.",
+            hint="Set live_fx=True or live_fx=False.",
+        )
+
+    from detekface.live_fx import LiveFXRenderer, validate_live_fx_style
+
+    valid_live_fx_style = validate_live_fx_style(live_fx_style)
+
+    if show_mesh or live_fx:
         analyze_face_shape = True
 
     session_kwargs = {}
@@ -629,6 +641,8 @@ def camera(
     feedback_frames: int = 0
     feedback_color = (0, 255, 0)
     frames_processed = 0
+
+    fx_renderer = LiveFXRenderer(style=valid_live_fx_style, color=bgr_color) if live_fx else None
 
     try:
         session.open()
@@ -664,6 +678,12 @@ def camera(
                     regions=mesh_regions,
                     copy=False,
                 )
+
+            # Render animated Live FX scanner if active
+            if live_fx:
+                if fx_renderer is None:
+                    fx_renderer = LiveFXRenderer(style=valid_live_fx_style, color=bgr_color)
+                fx_renderer.render(display_frame, faces=result.faces, copy=False)
 
             # Render face shape scanner overlays if requested
             if show_face_shape and analyze_face_shape:
@@ -732,6 +752,33 @@ def camera(
                 feedback_frames = 45
                 feedback_color = (0, 255, 136)
                 print(f"[detekface] Switched mesh style to: {valid_mesh_style}")
+
+            # Toggle / cycle Live FX on 'f' or 'F'
+            if key in (ord("f"), ord("F")):
+                from detekface.live_fx import SUPPORTED_LIVE_FX_STYLES
+
+                if not live_fx:
+                    live_fx = True
+                    feedback_text = f"Live FX: ON ({valid_live_fx_style})"
+                else:
+                    curr_fx_idx = (
+                        SUPPORTED_LIVE_FX_STYLES.index(valid_live_fx_style)
+                        if valid_live_fx_style in SUPPORTED_LIVE_FX_STYLES
+                        else 0
+                    )
+                    next_idx = curr_fx_idx + 1
+                    if next_idx >= len(SUPPORTED_LIVE_FX_STYLES):
+                        live_fx = False
+                        feedback_text = "Live FX: OFF"
+                    else:
+                        valid_live_fx_style = SUPPORTED_LIVE_FX_STYLES[next_idx]
+                        if fx_renderer is not None:
+                            fx_renderer.style = valid_live_fx_style
+                        feedback_text = f"Live FX: {valid_live_fx_style}"
+
+                feedback_frames = 45
+                feedback_color = (0, 255, 136)
+                print(f"[detekface] {feedback_text}")
 
             # Capture largest face on 'c' or 'C'
             if key in (ord("c"), ord("C")):
