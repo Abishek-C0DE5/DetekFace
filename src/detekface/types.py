@@ -357,6 +357,7 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
@@ -377,6 +378,7 @@ class DetectionResult:
              mesh_thickness: Line stroke thickness for facial mesh.
              mesh_regions: Anatomical mesh regions to render ('contours', 'eyes', 'lips', etc.).
              mesh_draw_points: Whether to render vertex keypoint dots.
+             show_contour: Alias for show_shape_contour.
              live_fx: Whether to render animated Live FX modern computer-vision scanner layer.
              live_fx_style: Live FX animation style ('scan', 'neon', 'wireframe', 'minimal').
              live_fx_timestamp: Optional clock timestamp in seconds for deterministic animation testing.
@@ -392,16 +394,10 @@ class DetectionResult:
 
         from detekface.drawing import draw_faces, parse_color_to_bgr
 
-        annotated = draw_faces(
-            image=self.image,
-            faces=self.faces,
-            shape=shape,
-            color=color,
-            thickness=thickness,
-            show_confidence=show_confidence,
-            copy=True,
-        )
+        effective_contour = show_shape_contour if show_contour is None else bool(show_contour)
 
+        # Layer 1: Dense facial mesh wireframe (drawn first as base layer)
+        annotated = self.image.copy()
         if show_mesh:
             from detekface.mesh import draw_face_meshes
 
@@ -417,6 +413,7 @@ class DetectionResult:
                 copy=False,
             )
 
+        # Layer 2: Live FX modern computer-vision scanner
         if live_fx:
             from detekface.live_fx import LiveFXRenderer
 
@@ -428,6 +425,18 @@ class DetectionResult:
                 copy=False,
             )
 
+        # Layer 3: Primary face overlay shapes
+        annotated = draw_faces(
+            image=annotated,
+            faces=self.faces,
+            shape=shape,
+            color=color,
+            thickness=thickness,
+            show_confidence=show_confidence,
+            copy=False,
+        )
+
+        # Layer 4: Face shape biometric badges & silhouette contour
         if show_face_shape:
             from detekface.face_shape import draw_face_shape_overlay
 
@@ -440,7 +449,7 @@ class DetectionResult:
                         effect=None,
                         color=bgr_col,
                         thickness=thickness,
-                        show_contour=show_shape_contour,
+                        show_contour=effective_contour,
                         show_measurements=show_shape_measurements,
                     )
 
@@ -452,6 +461,19 @@ class DetectionResult:
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_face_shape: bool = False,
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_style: str = "wireframe",
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: Optional[int] = None,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
+        live_fx_timestamp: Optional[float] = None,
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -459,6 +481,19 @@ class DetectionResult:
             color=color,
             thickness=thickness,
             show_confidence=show_confidence,
+            show_face_shape=show_face_shape,
+            show_shape_contour=show_shape_contour,
+            show_shape_measurements=show_shape_measurements,
+            show_mesh=show_mesh,
+            mesh_style=mesh_style,
+            mesh_color=mesh_color,
+            mesh_thickness=mesh_thickness,
+            mesh_regions=mesh_regions,
+            mesh_draw_points=mesh_draw_points,
+            show_contour=show_contour,
+            live_fx=live_fx,
+            live_fx_style=live_fx_style,
+            live_fx_timestamp=live_fx_timestamp,
         )
 
     def render(
@@ -467,6 +502,19 @@ class DetectionResult:
         color: Union[str, Tuple[int, int, int]] = "#00FF88",
         thickness: int = 3,
         show_confidence: bool = False,
+        show_face_shape: bool = False,
+        show_shape_contour: bool = True,
+        show_shape_measurements: bool = False,
+        show_mesh: bool = False,
+        mesh_style: str = "wireframe",
+        mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        mesh_thickness: Optional[int] = None,
+        mesh_regions: Optional[Sequence[str]] = None,
+        mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
+        live_fx_timestamp: Optional[float] = None,
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -474,6 +522,19 @@ class DetectionResult:
             color=color,
             thickness=thickness,
             show_confidence=show_confidence,
+            show_face_shape=show_face_shape,
+            show_shape_contour=show_shape_contour,
+            show_shape_measurements=show_shape_measurements,
+            show_mesh=show_mesh,
+            mesh_style=mesh_style,
+            mesh_color=mesh_color,
+            mesh_thickness=mesh_thickness,
+            mesh_regions=mesh_regions,
+            mesh_draw_points=mesh_draw_points,
+            show_contour=show_contour,
+            live_fx=live_fx,
+            live_fx_style=live_fx_style,
+            live_fx_timestamp=live_fx_timestamp,
         )
 
     @property
@@ -498,6 +559,7 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
@@ -539,6 +601,7 @@ class DetectionResult:
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,
             mesh_draw_points=mesh_draw_points,
+            show_contour=show_contour,
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,
@@ -591,6 +654,7 @@ class DetectionResult:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
@@ -636,6 +700,7 @@ class DetectionResult:
             mesh_thickness=mesh_thickness,
             mesh_regions=mesh_regions,
             mesh_draw_points=mesh_draw_points,
+            show_contour=show_contour,
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,

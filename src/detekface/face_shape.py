@@ -383,6 +383,7 @@ def match_and_attach_face_shapes(
     faces: Sequence[FaceDetection],
     landmark_sets: List[List[Point]],
     image_shape: Tuple[int, int],
+    skip_shape_analysis: bool = False,
 ) -> List[FaceDetection]:
     """Associate extracted dense landmarks with detected face bounding boxes and perform analysis.
 
@@ -390,6 +391,8 @@ def match_and_attach_face_shapes(
         faces: Sequence of detected FaceDetection objects from the primary detector.
         landmark_sets: Extracted dense landmarks (one list of 478 points per localized face).
         image_shape: Dimensions of the image as (height, width).
+        skip_shape_analysis: If True, attaches dense landmarks for mesh visualization without
+            calculating geometric face shape proportions or setting face_shape.
 
     Returns:
         List of FaceDetection objects with face_shape and dense_landmarks attached.
@@ -401,14 +404,16 @@ def match_and_attach_face_shapes(
     if not landmark_sets:
         enriched: List[FaceDetection] = []
         for face in faces:
-            shape_result = FaceShapeResult(
-                label="undetermined",
-                fit_score=0.0,
-                alternatives={s: 0.0 for s in SUPPORTED_FACE_SHAPES if s != "undetermined"},
-                measurements={},
-                quality_status="rejected",
-                warnings=["No dense facial landmarks were detected on this face."],
-            )
+            shape_result = None
+            if not skip_shape_analysis:
+                shape_result = FaceShapeResult(
+                    label="undetermined",
+                    fit_score=0.0,
+                    alternatives={s: 0.0 for s in SUPPORTED_FACE_SHAPES if s != "undetermined"},
+                    measurements={},
+                    quality_status="rejected",
+                    warnings=["No dense facial landmarks were detected on this face."],
+                )
             enriched.append(replace(face, face_shape=shape_result, dense_landmarks=None))
         return enriched
 
@@ -438,18 +443,22 @@ def match_and_attach_face_shapes(
 
         if best_idx is not None:
             matched_lms = unassigned_lms.pop(best_idx)
-            shape_result = analyze_face_geometry(matched_lms, image_shape)
+            shape_result = None
+            if not skip_shape_analysis:
+                shape_result = analyze_face_geometry(matched_lms, image_shape)
             enriched_faces.append(replace(face, face_shape=shape_result, dense_landmarks=matched_lms))
         else:
             # Fallback if no matching landmark set
-            shape_result = FaceShapeResult(
-                label="undetermined",
-                fit_score=0.0,
-                alternatives={s: 0.0 for s in SUPPORTED_FACE_SHAPES if s != "undetermined"},
-                measurements={},
-                quality_status="rejected",
-                warnings=["Could not associate dense facial landmarks with this face."],
-            )
+            shape_result = None
+            if not skip_shape_analysis:
+                shape_result = FaceShapeResult(
+                    label="undetermined",
+                    fit_score=0.0,
+                    alternatives={s: 0.0 for s in SUPPORTED_FACE_SHAPES if s != "undetermined"},
+                    measurements={},
+                    quality_status="rejected",
+                    warnings=["Could not associate dense facial landmarks with this face."],
+                )
             enriched_faces.append(replace(face, face_shape=shape_result, dense_landmarks=None))
 
     return enriched_faces

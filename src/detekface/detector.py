@@ -322,6 +322,7 @@ class FaceDetector:
         self,
         image: Union[str, Path, np.ndarray],
         analyze_face_shape: bool = False,
+        mesh: bool = False,
     ) -> DetectionResult:
         """Perform face detection on a single image.
 
@@ -330,6 +331,8 @@ class FaceDetector:
             analyze_face_shape: If True, performs dense facial landmark localization and
                 computes geometric face shape analysis (oval, round, square, heart, diamond,
                 oblong, undetermined) on all detected faces.
+            mesh: If True, extracts dense facial landmarks for mesh rendering without requiring
+                full biometric face-shape analysis classification.
 
         Returns:
             DetectionResult containing detected FaceDetection instances and the original BGR image.
@@ -353,12 +356,17 @@ class FaceDetector:
         else:
             faces = self._backend.detect(bgr_image)
 
-        if analyze_face_shape:
+        if analyze_face_shape or mesh:
             from detekface.face_shape import DenseLandmarkExtractor, match_and_attach_face_shapes
 
             extractor = DenseLandmarkExtractor.get_default(cache_dir=self._cache_dir)
             landmark_sets = extractor.extract(bgr_image)
-            faces = match_and_attach_face_shapes(faces, landmark_sets, image_shape=(height, width))
+            faces = match_and_attach_face_shapes(
+                faces,
+                landmark_sets,
+                image_shape=(height, width),
+                skip_shape_analysis=bool(mesh and not analyze_face_shape),
+            )
 
         return DetectionResult(faces=faces, image=bgr_image)
 

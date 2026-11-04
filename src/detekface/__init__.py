@@ -118,6 +118,7 @@ def detect(
     backend: str = "yunet",
     input_size: Optional[Tuple[int, int]] = None,
     analyze_face_shape: bool = False,
+    mesh: bool = False,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -132,6 +133,7 @@ def detect(
         input_size: Optional inference resolution tuple (width, height) for performance scaling.
         analyze_face_shape: If True, performs dense landmark localization and geometric
             face shape classification (oval, round, square, heart, diamond, oblong, undetermined).
+        mesh: If True, performs dense facial landmark localization to enable mesh rendering.
 
     Returns:
         DetectionResult containing detected faces and the original BGR image.
@@ -169,7 +171,7 @@ def detect(
             )
         _detector_cache[cache_key] = detector
 
-    return detector.detect(image, analyze_face_shape=analyze_face_shape)
+    return detector.detect(image, analyze_face_shape=analyze_face_shape, mesh=mesh)
 
 
 def detect_many(
