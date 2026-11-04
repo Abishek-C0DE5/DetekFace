@@ -21,6 +21,8 @@ Welcome to the official documentation for **DetekFace**, a high-performance, beg
 | **[Face Capture & Cropping](face-capture.md)** | Extracting pristine, unpolluted face crops from images, webcams, or video feeds with smart boundary clamping. | Avatar generators, biometric datasets, profiling |
 | **[Backend Selection](backends.md)** | Selecting between default YuNet and optional Google MediaPipe (`detekface[mediapipe]`) and landmark contracts. | Backend comparison, landmark requirements |
 | **[Configuration & Styling](configuration.md)** | 5 overlay shapes (`rectangle`, `corners`, `circle`, `rounded`, `hud`), color parsing, status banners, and thresholds. | Visual customization, aesthetic tailoring |
+| **[Facial Mesh & Live FX](facial-mesh.md)** | 478 dense landmark wireframes, 5 mesh styles (`wireframe`, `neon`, etc.), and animated Live FX scanner. | Face topology, AR wireframes, futuristic HUD |
+| **[Face Shape Analysis](face-shape.md)** | Geometric proportion analysis, 6 canonical face shapes, and temporal smoothing. | Biometric classification, beauty tech |
 | **[API Reference](api-reference.md)** | Exhaustive reference of every public function, class, dataclass, method, property, and exception. | Complete API lookups, typing specifications |
 | **[Troubleshooting & FAQ](troubleshooting.md)** | Solutions for camera permissions, missing GUI in headless environments, proxy/model download fixes. | Debugging errors, production deployment |
 | **[Validation Methodology](validation.md)** | Legally compliant validation dataset, precision/recall/F1 metrics, IoU matching, and scenario challenges. | Model evaluation, reproducible benchmarks |

@@ -236,11 +236,13 @@ During webcam or video playback, use these keyboard shortcuts:
 | Key | Action | What it does |
 | :---: | :--- | :--- |
 | <kbd>C</kbd> | **Capture Face** | Crops the largest visible face from the clean original frame and saves it to `./captures/`. |
+| <kbd>M</kbd> | **Cycle Mesh Style** | Toggles dense facial mesh wireframe styles live (`wireframe`, `neon`, `minimal`, `contour`, `points`, off). |
+| <kbd>F</kbd> | **Cycle Live FX** | Toggles animated computer-vision laser scanner styles live (`scan`, `neon`, `wireframe`, `minimal`, off). |
 | <kbd>Q</kbd> | **Quit** | Cleanly exits the preview window and releases the camera device. |
 | <kbd>Esc</kbd> | **Emergency Exit** | Immediately closes all OpenCV windows and terminates the loop. |
 | <kbd>✕</kbd> | **Window Close** | Clicking the OS window close button terminates safely without hanging. |
 
-👉 For full details, see the **[Live Webcam Guide](docs/webcam.md)**.
+👉 For full details, see the **[Live Webcam Guide](docs/webcam.md)** and **[Facial Mesh Guide](docs/facial-mesh.md)**.
 
 ---
 
@@ -363,6 +365,36 @@ result.save("output_annotated.jpg", shape="hud", color="#00FF88", show_confidenc
 ```
 
 👉 For more details, see the **[Image Detection Guide](docs/image-detection.md)**.
+
+---
+
+## 12. Dense Facial Mesh & Live FX Scanner
+
+DetekFace 0.2.0 introduces **478 dense 2D facial surface landmarks**, 5 customizable mesh styles, and real-time animated computer-vision laser scanning:
+
+```python
+import detekface
+
+# 1. Live Webcam with Neon Facial Mesh & Scanning Laser Beam
+detekface.camera(
+    show_mesh=True,
+    mesh_style="neon",       # 'wireframe', 'neon', 'minimal', 'contour', 'points'
+    mesh_color="#00FF88",    # Hex code, RGB tuple, or color name
+    show_scan=True,          # Animated computer-vision laser scanning line
+    show_fps=True,
+)
+
+# 2. Still-Image Mesh Rendering
+result = detekface.detect("portrait.jpg", mesh=True)
+annotated = result.render(show_mesh=True, mesh_style="neon")
+result.save("portrait_mesh.jpg", show_mesh=True, mesh_style="neon")
+```
+
+> [!NOTE]
+> Facial mesh visualization requires the optional MediaPipe extra: `pip install "detekface[mediapipe]"`.
+> Planar 2D mesh wireframes represent perspective projections of facial keypoints, not volumetric medical reconstructions.
+
+👉 For complete details, see the **[Facial Mesh & Live FX Guide](docs/facial-mesh.md)**.
 
 ---
 

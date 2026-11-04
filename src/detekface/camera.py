@@ -709,18 +709,6 @@ def camera(
     frames_processed = 0
 
     fx_renderer = LiveFXRenderer(style=valid_live_fx_style, color=bgr_color) if live_fx else None
-    mesh_renderer = None
-    if show_mesh:
-        from detekface.mesh import FaceMeshRenderer
-
-        m_col = parse_color_to_bgr(mesh_color) if mesh_color is not None else bgr_color
-        mesh_renderer = FaceMeshRenderer(
-            style=valid_mesh_style,
-            color=m_col,
-            thickness=mesh_thickness,
-            draw_points=mesh_draw_points,
-            regions=mesh_regions,
-        )
 
     try:
         session.open()
@@ -829,8 +817,6 @@ def camera(
                     else 0
                 )
                 valid_mesh_style = SUPPORTED_MESH_STYLES[(curr_idx + 1) % len(SUPPORTED_MESH_STYLES)]
-                if mesh_renderer is not None:
-                    mesh_renderer.style = valid_mesh_style
                 feedback_text = f"Mesh: {valid_mesh_style}"
                 feedback_frames = 45
                 feedback_color = (0, 255, 136)
