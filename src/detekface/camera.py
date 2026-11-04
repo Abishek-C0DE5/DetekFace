@@ -352,8 +352,20 @@ class CameraSession:
         mesh_thickness: Optional[int] = None,
         mesh_regions: Optional[Sequence[str]] = None,
         mesh_draw_points: Optional[bool] = None,
+        show_contour: Optional[bool] = None,
+        show_scan: Optional[bool] = None,
+        live_fx: bool = False,
+        live_fx_style: str = "scan",
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
+
+        Rendering Order:
+            1. Facial mesh wireframe (base anatomical layer).
+            2. Face shape contour silhouette (if enabled).
+            3. Live FX scanner animations / laser beam sweep / reticle brackets.
+            4. Primary bounding box / overlay shapes (rectangle, corners, circle, hud, rounded).
+            5. Face shape classification badges & measurements.
+            6. Top-level status HUD (FPS counter, face count, confidence tags).
 
         Returns:
             np.ndarray: Annotated BGR frame array.
@@ -366,17 +378,13 @@ class CameraSession:
         valid_shape, valid_thickness = validate_render_parameters(shape, thickness)
         bgr_color = parse_color_to_bgr(color)
 
-        display_frame = self._latest_frame.copy()
-        draw_faces(
-            display_frame,
-            self._latest_result.faces,
-            shape=valid_shape,
-            color=bgr_color,
-            thickness=valid_thickness,
-            show_confidence=show_confidence,
-            copy=False,
-        )
+        # Resolve aliases for show_contour and show_scan
+        effective_show_contour = show_shape_contour if show_contour is None else bool(show_contour)
+        effective_live_fx = live_fx or (show_scan is True)
 
+        display_frame = self._latest_frame.copy()
+
+        # Layer 1: Dense facial mesh wireframe
         if show_mesh:
             from detekface.mesh import draw_face_meshes
 
@@ -392,21 +400,44 @@ class CameraSession:
                 copy=False,
             )
 
+        # Layer 2: Live FX scanner & lock indicators
+        if effective_live_fx:
+            from detekface.live_fx import LiveFXRenderer
+
+            fx_renderer = LiveFXRenderer(style=live_fx_style, color=bgr_color)
+            fx_renderer.render(display_frame, faces=self._latest_result.faces, copy=False)
+
+        # Layer 3: Primary face overlay shapes
+        draw_faces(
+            display_frame,
+            self._latest_result.faces,
+            shape=valid_shape,
+            color=bgr_color,
+            thickness=valid_thickness,
+            show_confidence=show_confidence,
+            copy=False,
+        )
+
+        # Layer 4: Face shape analysis badge and silhouette contour
         if show_face_shape and self.analyze_face_shape:
             scan_phase = (self._frames_read % 60) / 60.0
+            eff_effect = face_shape_effect
+            if show_scan is not None:
+                eff_effect = "scan" if show_scan else None
             for face in self._latest_result.faces:
                 if face.face_shape is not None:
                     draw_face_shape_overlay(
                         image=display_frame,
                         face=face,
-                        effect=face_shape_effect,
+                        effect=eff_effect,
                         scan_phase=scan_phase,
                         color=bgr_color,
                         thickness=valid_thickness,
-                        show_contour=show_shape_contour,
+                        show_contour=effective_show_contour,
                         show_measurements=show_shape_measurements,
                     )
 
+        # Layer 5: Top-level status metrics (FPS and Face count)
         if show_fps or show_count:
             draw_metrics_overlay(
                 display_frame,
@@ -530,6 +561,8 @@ def camera(
     mesh_thickness: Optional[int] = None,
     mesh_regions: Optional[Sequence[str]] = None,
     mesh_draw_points: Optional[bool] = None,
+    show_contour: Optional[bool] = None,
+    show_scan: Optional[bool] = None,
     live_fx: bool = False,
     live_fx_style: str = "scan",
 ) -> None:
@@ -537,6 +570,8 @@ def camera(
 
     Controls:
         - Press 'c' or 'C' to capture and save the largest detected face.
+        - Press 'm' or 'M' to cycle dense facial mesh wireframe styles.
+        - Press 'f' or 'F' to cycle Live FX scanner animation styles.
         - Press 'q', 'Q', or 'Escape' to close the preview window.
 
     Args:
@@ -563,6 +598,16 @@ def camera(
         face_shape_effect: Biometric visual effect ('scan' for animated laser line, or None).
         show_shape_contour: If True, draws the facial silhouette contour mesh.
         show_shape_measurements: If True, displays live geometric proportion ratios.
+        show_mesh: Whether to render dense facial landmark wireframe mesh.
+        mesh_style: Mesh visualization style ('wireframe', 'neon', 'minimal', 'contour', 'points').
+        mesh_color: Color for facial mesh lines (defaults to main overlay color).
+        mesh_thickness: Line stroke width in pixels for mesh.
+        mesh_regions: Anatomical facial regions to render.
+        mesh_draw_points: Whether to render vertex dots.
+        show_contour: Alias for show_shape_contour.
+        show_scan: Convenience flag; when True enables Live FX laser scanner overlay.
+        live_fx: Whether to render animated Live FX modern computer-vision scanner layer.
+        live_fx_style: Live FX animation style ('scan', 'neon', 'wireframe', 'minimal').
 
     Raises:
         ConfigurationError: If shape, color, thickness, or display flags are invalid.
@@ -602,6 +647,21 @@ def camera(
             message=f"show_mesh must be a boolean, got {type(show_mesh).__name__}.",
             hint="Set show_mesh=True or show_mesh=False.",
         )
+
+    if show_contour is not None and not isinstance(show_contour, bool):
+        raise ConfigurationError(
+            message=f"show_contour must be a boolean or None, got {type(show_contour).__name__}.",
+            hint="Set show_contour=True or show_contour=False.",
+        )
+    if show_scan is not None and not isinstance(show_scan, bool):
+        raise ConfigurationError(
+            message=f"show_scan must be a boolean or None, got {type(show_scan).__name__}.",
+            hint="Set show_scan=True or show_scan=False.",
+        )
+
+    effective_show_contour = show_shape_contour if show_contour is None else bool(show_contour)
+    if show_scan is True:
+        live_fx = True
 
     from detekface.mesh import validate_mesh_style
 
@@ -652,18 +712,7 @@ def camera(
             assert session.latest_frame is not None
             display_frame = session.latest_frame.copy()
 
-            # Draw customizable overlays on the display frame
-            draw_faces(
-                display_frame,
-                result.faces,
-                shape=valid_shape,
-                color=bgr_color,
-                thickness=valid_thickness,
-                show_confidence=show_confidence,
-                copy=False,
-            )
-
-            # Render dense facial mesh wireframe if requested
+            # Layer 1: Dense facial mesh wireframe (base anatomical layer)
             if show_mesh:
                 from detekface.mesh import draw_face_meshes
 
@@ -679,29 +728,43 @@ def camera(
                     copy=False,
                 )
 
-            # Render animated Live FX scanner if active
+            # Layer 2: Live FX animated scanner & lock indicators
             if live_fx:
                 if fx_renderer is None:
                     fx_renderer = LiveFXRenderer(style=valid_live_fx_style, color=bgr_color)
                 fx_renderer.render(display_frame, faces=result.faces, copy=False)
 
-            # Render face shape scanner overlays if requested
+            # Layer 3: Primary face overlay shapes
+            draw_faces(
+                display_frame,
+                result.faces,
+                shape=valid_shape,
+                color=bgr_color,
+                thickness=valid_thickness,
+                show_confidence=show_confidence,
+                copy=False,
+            )
+
+            # Layer 4: Face shape biometric scanner badges and contour silhouette
             if show_face_shape and analyze_face_shape:
                 scan_phase = (frames_processed % 60) / 60.0
+                eff_effect = face_shape_effect
+                if show_scan is not None:
+                    eff_effect = "scan" if show_scan else None
                 for face in result.faces:
                     if face.face_shape is not None:
                         draw_face_shape_overlay(
                             image=display_frame,
                             face=face,
-                            effect=face_shape_effect,
+                            effect=eff_effect,
                             scan_phase=scan_phase,
                             color=bgr_color,
                             thickness=valid_thickness,
-                            show_contour=show_shape_contour,
+                            show_contour=effective_show_contour,
                             show_measurements=show_shape_measurements,
                         )
 
-            # Draw status metrics (FPS and Face count)
+            # Layer 5: Status metrics (FPS and Face count)
             if show_fps or show_count:
                 draw_metrics_overlay(
                     display_frame,
