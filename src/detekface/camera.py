@@ -76,6 +76,13 @@ class CameraSession:
         gestures: Optional[Sequence[str]] = None,
         gesture_config: Optional[GestureConfig] = None,
         show_gestures: bool = False,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        scale_adjust: float = 1.0,
+        y_offset: float = 0.0,
+        accessory_scale: Optional[float] = None,
+        accessory_y_offset: Optional[float] = None,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -88,9 +95,28 @@ class CameraSession:
         self.on_gesture = on_gesture
         self.show_gestures = bool(show_gestures)
 
-        # Gestures require tracking and pose estimation
-        self.track_faces = bool(track_faces or self.detect_gestures)
-        self.estimate_pose = bool(estimate_pose or self.detect_gestures)
+        eff = effect if effect is not None else accessory
+        self.effect: Optional[str] = eff
+        self.accessory_opacity: float = float(accessory_opacity)
+        self.accessory_scale: float = float(accessory_scale if accessory_scale is not None else scale_adjust)
+        self.accessory_y_offset: float = float(accessory_y_offset if accessory_y_offset is not None else y_offset)
+
+        if self.effect is not None:
+            from detekface.accessories import FaceAccessoryRenderer
+
+            self._accessory_renderer = FaceAccessoryRenderer(
+                accessory=self.effect,
+                opacity=self.accessory_opacity,
+                scale_adjust=self.accessory_scale,
+                y_offset=self.accessory_y_offset,
+                smooth=True,
+            )
+        else:
+            self._accessory_renderer = None
+
+        # Gestures and AR accessories benefit from tracking and pose estimation
+        self.track_faces = bool(track_faces or self.detect_gestures or self.effect is not None)
+        self.estimate_pose = bool(estimate_pose or self.detect_gestures or self.effect is not None)
 
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
         self._tracker = FaceTracker() if self.track_faces else None
@@ -582,6 +608,11 @@ class CameraSession:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         show_gestures: bool = False,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: Optional[float] = None,
+        accessory_scale: Optional[float] = None,
+        accessory_y_offset: Optional[float] = None,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -674,6 +705,32 @@ class CameraSession:
                 face_count=self._latest_result.count if show_count else None,
                 color_bgr=bgr_color,
             )
+
+        # Layer 6: AR Face accessories
+        eff = effect if effect is not None else (accessory if accessory is not None else self.effect)
+        if eff is not None:
+            op = accessory_opacity if accessory_opacity is not None else self.accessory_opacity
+            sc = accessory_scale if accessory_scale is not None else self.accessory_scale
+            yo = accessory_y_offset if accessory_y_offset is not None else self.accessory_y_offset
+            if self._accessory_renderer is not None and eff == self.effect:
+                display_frame = self._accessory_renderer.render(
+                    display_frame,
+                    self._latest_result.faces,
+                    copy=False,
+                )
+            else:
+                from detekface.accessories import render_accessory
+
+                display_frame = render_accessory(
+                    display_frame,
+                    self._latest_result.faces,
+                    accessory=eff,
+                    opacity=op,
+                    scale_adjust=sc,
+                    y_offset=yo,
+                    copy=False,
+                )
+
         return display_frame
 
     def show(
@@ -737,6 +794,11 @@ def open_camera(
     gestures: Optional[Sequence[str]] = None,
     gesture_config: Optional[GestureConfig] = None,
     show_gestures: bool = False,
+    effect: Optional[str] = None,
+    accessory: Optional[str] = None,
+    accessory_opacity: float = 1.0,
+    accessory_scale: float = 1.0,
+    accessory_y_offset: float = 0.0,
 ) -> CameraSession:
     """Open and return a managed CameraSession context manager.
 
@@ -772,6 +834,12 @@ def open_camera(
         kwargs["gestures"] = gestures
         kwargs["gesture_config"] = gesture_config
         kwargs["show_gestures"] = show_gestures
+    eff = effect if effect is not None else accessory
+    if eff is not None:
+        kwargs["effect"] = eff
+        kwargs["accessory_opacity"] = accessory_opacity
+        kwargs["accessory_scale"] = accessory_scale
+        kwargs["accessory_y_offset"] = accessory_y_offset
 
     return CameraSession(
         camera_index=camera_index,
@@ -832,6 +900,11 @@ def camera(
     gestures: Optional[Sequence[str]] = None,
     gesture_config: Optional[GestureConfig] = None,
     show_gestures: bool = False,
+    effect: Optional[str] = None,
+    accessory: Optional[str] = None,
+    accessory_opacity: float = 1.0,
+    accessory_scale: float = 1.0,
+    accessory_y_offset: float = 0.0,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -1006,6 +1079,23 @@ def camera(
     if show_mesh or live_fx or detect_gestures:
         analyze_face_shape = True
 
+    eff = effect if effect is not None else accessory
+    current_accessory: Optional[str] = eff
+    if current_accessory is not None:
+        from detekface.accessories import FaceAccessoryRenderer
+
+        accessory_renderer = FaceAccessoryRenderer(
+            accessory=current_accessory,
+            opacity=accessory_opacity,
+            scale_adjust=accessory_scale,
+            y_offset=accessory_y_offset,
+            smooth=True,
+        )
+        track_faces = True
+        estimate_pose = True
+    else:
+        accessory_renderer = None
+
     session_kwargs = {}
     if analyze_face_shape:
         session_kwargs["analyze_face_shape"] = True
@@ -1019,6 +1109,11 @@ def camera(
         session_kwargs["gestures"] = gestures
         session_kwargs["gesture_config"] = gesture_config
         session_kwargs["show_gestures"] = show_gestures
+    if current_accessory is not None:
+        session_kwargs["effect"] = current_accessory
+        session_kwargs["accessory_opacity"] = accessory_opacity
+        session_kwargs["accessory_scale"] = accessory_scale
+        session_kwargs["accessory_y_offset"] = accessory_y_offset
 
     session = CameraSession(
         camera_index=camera_index,
@@ -1121,6 +1216,14 @@ def camera(
                     color_bgr=bgr_color,
                 )
 
+            # Layer 6: AR Face accessories
+            if current_accessory is not None and accessory_renderer is not None:
+                display_frame = accessory_renderer.render(
+                    display_frame,
+                    result.faces,
+                    copy=False,
+                )
+
             # Render capture feedback banner if active
             if feedback_frames > 0:
                 cv2.putText(
@@ -1198,6 +1301,33 @@ def camera(
                             fx_renderer.style = valid_live_fx_style
                         feedback_text = f"Live FX: {valid_live_fx_style}"
 
+                feedback_frames = 45
+                feedback_color = (0, 255, 136)
+                print(f"[detekface] {feedback_text}")
+
+            # Toggle / cycle AR face accessory on 'a' or 'A'
+            if key in (ord("a"), ord("A")):
+                from detekface.accessories import FaceAccessoryRenderer, SUPPORTED_ACCESSORIES
+
+                acc_cycle = [None] + list(SUPPORTED_ACCESSORIES)
+                try:
+                    c_idx = acc_cycle.index(current_accessory)
+                except ValueError:
+                    c_idx = 0
+                next_acc = acc_cycle[(c_idx + 1) % len(acc_cycle)]
+                current_accessory = next_acc
+                if current_accessory is not None:
+                    accessory_renderer = FaceAccessoryRenderer(
+                        accessory=current_accessory,
+                        opacity=accessory_opacity,
+                        scale_adjust=accessory_scale,
+                        y_offset=accessory_y_offset,
+                        smooth=True,
+                    )
+                    feedback_text = f"Accessory: {current_accessory}"
+                else:
+                    accessory_renderer = None
+                    feedback_text = "Accessory: None"
                 feedback_frames = 45
                 feedback_color = (0, 255, 136)
                 print(f"[detekface] {feedback_text}")

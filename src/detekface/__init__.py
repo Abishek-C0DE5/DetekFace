@@ -127,6 +127,21 @@ from detekface.live_fx import (
     validate_live_fx_style,
 )
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
+from detekface.accessories import (
+    ACCESSORY_ALIASES,
+    ACCESSORY_CROWN,
+    ACCESSORY_FACE_MASK,
+    ACCESSORY_FUTURISTIC_VISOR,
+    ACCESSORY_HALO,
+    ACCESSORY_SUNGLASSES,
+    SUPPORTED_ACCESSORIES,
+    AccessorySmoother,
+    FaceAccessoryRenderer,
+    compute_accessory_transform,
+    load_accessory_asset,
+    overlay_rgba,
+    render_accessory,
+)
 
 __version__: str = "0.3.0"
 
@@ -410,4 +425,17 @@ __all__: List[str] = [
     "SUPPORTED_BACKENDS",
     "DEFAULT_BACKEND",
     "get_backend",
+    "ACCESSORY_SUNGLASSES",
+    "ACCESSORY_CROWN",
+    "ACCESSORY_FACE_MASK",
+    "ACCESSORY_FUTURISTIC_VISOR",
+    "ACCESSORY_HALO",
+    "SUPPORTED_ACCESSORIES",
+    "ACCESSORY_ALIASES",
+    "FaceAccessoryRenderer",
+    "AccessorySmoother",
+    "load_accessory_asset",
+    "compute_accessory_transform",
+    "overlay_rgba",
+    "render_accessory",
 ]

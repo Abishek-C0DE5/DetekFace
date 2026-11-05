@@ -54,6 +54,11 @@ def video(
     show_tracking_ids: bool = False,
     show_pose: bool = False,
     estimate_pose: bool = False,
+    effect: Optional[str] = None,
+    accessory: Optional[str] = None,
+    accessory_opacity: float = 1.0,
+    accessory_scale: float = 1.0,
+    accessory_y_offset: float = 0.0,
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -227,6 +232,25 @@ def video(
     pose_smoother = TemporalPoseSmoother() if (estimate_pose or show_pose) else None
     latest_result = None
 
+    eff = effect if effect is not None else accessory
+    if eff is not None:
+        from detekface.accessories import FaceAccessoryRenderer
+
+        accessory_renderer = FaceAccessoryRenderer(
+            accessory=eff,
+            opacity=accessory_opacity,
+            scale_adjust=accessory_scale,
+            y_offset=accessory_y_offset,
+            smooth=True,
+        )
+        if tracker is None:
+            tracker = FaceTracker()
+        if pose_smoother is None:
+            pose_smoother = TemporalPoseSmoother()
+        estimate_pose = True
+    else:
+        accessory_renderer = None
+
     feedback_text: str = ""
     feedback_frames: int = 0
     feedback_color = (0, 255, 0)
@@ -324,6 +348,14 @@ def video(
                 show_pose=show_pose,
                 copy=False,
             )
+
+            # Render AR face accessory if enabled
+            if accessory_renderer is not None:
+                display_frame = accessory_renderer.render(
+                    display_frame,
+                    result.faces,
+                    copy=False,
+                )
 
             # Render status metrics if requested
             if show_fps or show_count:

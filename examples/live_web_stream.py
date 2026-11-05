@@ -19,6 +19,7 @@ events_lock = threading.Lock()
 latest_jpeg: bytes = b""
 frame_lock = threading.Lock()
 is_running = True
+current_accessory = "sunglasses"
 
 
 def on_gesture(event: detekface.GestureEvent) -> None:
@@ -56,6 +57,10 @@ HTML_PAGE = """<!DOCTYPE html>
         .card h2 { font-size: 15px; color: #58a6ff; margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 6px; }
         .guide-item { margin-bottom: 8px; font-size: 13px; line-height: 1.5; }
         .guide-item strong { color: #00ff88; }
+        .btn-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+        .acc-btn { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; transition: all 0.2s; }
+        .acc-btn:hover { background: #30363d; color: #58a6ff; border-color: #58a6ff; }
+        .acc-btn.active { background: #1f6feb; color: white; border-color: #58a6ff; }
         #event-log { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
         .event-item { background: #21262d; border-left: 4px solid #00ff88; padding: 6px 10px; border-radius: 4px; font-size: 12px; }
         .event-item .time { color: #8b949e; font-size: 11px; }
@@ -74,6 +79,17 @@ HTML_PAGE = """<!DOCTYPE html>
             <img id="cam-view" src="/frame" alt="Waiting for webcam feed..." width="640" height="480">
         </div>
         <div class="sidebar">
+            <div class="card">
+                <h2>AR Face Accessories (Milestone 5)</h2>
+                <div class="btn-group">
+                    <button class="acc-btn active" onclick="setAccessory(this, 'sunglasses')">🕶️ Sunglasses</button>
+                    <button class="acc-btn" onclick="setAccessory(this, 'crown')">👑 Crown</button>
+                    <button class="acc-btn" onclick="setAccessory(this, 'face_mask')">😷 Face Mask</button>
+                    <button class="acc-btn" onclick="setAccessory(this, 'futuristic_visor')">🥽 Visor</button>
+                    <button class="acc-btn" onclick="setAccessory(this, 'halo')">😇 Halo</button>
+                    <button class="acc-btn" onclick="setAccessory(this, 'none')">❌ None</button>
+                </div>
+            </div>
             <div class="card">
                 <h2>Live Gesture Activity</h2>
                 <div id="event-log">
@@ -95,14 +111,20 @@ HTML_PAGE = """<!DOCTYPE html>
             const next = new Image();
             next.onload = function() {
                 camImg.src = next.src;
-                setTimeout(streamFrames, 20); // ~50 FPS
+                requestAnimationFrame(streamFrames);
             };
             next.onerror = function() {
-                setTimeout(streamFrames, 100);
+                setTimeout(streamFrames, 80);
             };
             next.src = '/frame?t=' + Date.now();
         }
         streamFrames();
+
+        function setAccessory(btn, name) {
+            document.querySelectorAll('.acc-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            fetch('/accessory?name=' + encodeURIComponent(name));
+        }
 
         async function updateLog() {
             try {
@@ -144,6 +166,15 @@ class StreamingHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+        elif self.path.startswith("/accessory"):
+            global current_accessory
+            if "name=" in self.path:
+                name = self.path.split("name=")[1].split("&")[0].strip()
+                current_accessory = None if name in ("none", "") else name
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok"}')
         elif self.path.startswith("/frame"):
             with frame_lock:
                 frame_bytes = latest_jpeg
@@ -172,9 +203,8 @@ def webcam_worker() -> None:
             mirror=True,
             track_faces=True,
             estimate_pose=True,
-            detect_gestures=True,
-            on_gesture=on_gesture,
-            show_gestures=True,
+            target_fps=60.0,
+            async_mode=True,
         )
         print("[detekface] Webcam hardware initialized successfully.")
     except Exception as e:
@@ -192,13 +222,13 @@ def webcam_worker() -> None:
                     show_confidence=True,
                     show_fps=True,
                     show_count=True,
-                    show_gestures=True,
+                    effect=current_accessory,
                 )
-                success, encoded = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                success, encoded = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 80])
                 if success:
                     with frame_lock:
                         latest_jpeg = encoded.tobytes()
-                time.sleep(0.015)
+                time.sleep(0.002)
             except Exception as e:
                 print(f"[WARNING] Frame error: {e}")
                 time.sleep(0.05)

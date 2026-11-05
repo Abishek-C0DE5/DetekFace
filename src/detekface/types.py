@@ -421,6 +421,11 @@ class DetectionResult:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        accessory_scale: float = 1.0,
+        accessory_y_offset: float = 0.0,
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -486,15 +491,16 @@ class DetectionResult:
             )
 
         # Layer 3: Primary face overlay shapes
-        annotated = draw_faces(
-            image=annotated,
-            faces=self.faces,
-            shape=shape,
-            color=color,
-            thickness=thickness,
-            show_confidence=show_confidence,
-            copy=False,
-        )
+        if shape is not None and str(shape).strip().lower() != "none":
+            annotated = draw_faces(
+                image=annotated,
+                faces=self.faces,
+                shape=shape,
+                color=color,
+                thickness=thickness,
+                show_confidence=show_confidence,
+                copy=False,
+            )
 
         # Layer 4: Face shape biometric badges & silhouette contour
         if show_face_shape:
@@ -512,6 +518,21 @@ class DetectionResult:
                         show_contour=effective_contour,
                         show_measurements=show_shape_measurements,
                     )
+
+        # Layer 5: AR Face accessories
+        eff = effect if effect is not None else accessory
+        if eff is not None:
+            from detekface.accessories import render_accessory
+
+            annotated = render_accessory(
+                image=annotated,
+                faces=self.faces,
+                accessory=eff,
+                opacity=accessory_opacity,
+                scale_adjust=accessory_scale,
+                y_offset=accessory_y_offset,
+                copy=False,
+            )
 
         return annotated
 
@@ -534,6 +555,11 @@ class DetectionResult:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        accessory_scale: float = 1.0,
+        accessory_y_offset: float = 0.0,
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -554,6 +580,11 @@ class DetectionResult:
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,
+            effect=effect,
+            accessory=accessory,
+            accessory_opacity=accessory_opacity,
+            accessory_scale=accessory_scale,
+            accessory_y_offset=accessory_y_offset,
         )
 
     def render(
@@ -575,6 +606,11 @@ class DetectionResult:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        accessory_scale: float = 1.0,
+        accessory_y_offset: float = 0.0,
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -595,6 +631,11 @@ class DetectionResult:
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,
+            effect=effect,
+            accessory=accessory,
+            accessory_opacity=accessory_opacity,
+            accessory_scale=accessory_scale,
+            accessory_y_offset=accessory_y_offset,
         )
 
     @property
@@ -623,6 +664,11 @@ class DetectionResult:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        accessory_scale: float = 1.0,
+        accessory_y_offset: float = 0.0,
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -665,6 +711,11 @@ class DetectionResult:
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,
+            effect=effect,
+            accessory=accessory,
+            accessory_opacity=accessory_opacity,
+            accessory_scale=accessory_scale,
+            accessory_y_offset=accessory_y_offset,
         )
 
         try:
@@ -718,6 +769,11 @@ class DetectionResult:
         live_fx: bool = False,
         live_fx_style: str = "scan",
         live_fx_timestamp: Optional[float] = None,
+        effect: Optional[str] = None,
+        accessory: Optional[str] = None,
+        accessory_opacity: float = 1.0,
+        accessory_scale: float = 1.0,
+        accessory_y_offset: float = 0.0,
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -764,6 +820,11 @@ class DetectionResult:
             live_fx=live_fx,
             live_fx_style=live_fx_style,
             live_fx_timestamp=live_fx_timestamp,
+            effect=effect,
+            accessory=accessory,
+            accessory_opacity=accessory_opacity,
+            accessory_scale=accessory_scale,
+            accessory_y_offset=accessory_y_offset,
         )
 
         try:

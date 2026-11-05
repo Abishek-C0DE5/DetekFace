@@ -152,6 +152,25 @@ def build_parser() -> argparse.ArgumentParser:
         default="scan",
         help="Live FX animation style ('scan', 'neon', 'wireframe', 'minimal').",
     )
+    p_cam.add_argument(
+        "--effect",
+        choices=["sunglasses", "crown", "face_mask", "futuristic_visor", "halo"],
+        default=None,
+        help="AR face accessory effect overlay (sunglasses, crown, face_mask, futuristic_visor, halo).",
+    )
+    p_cam.add_argument(
+        "--async",
+        dest="async_mode",
+        action="store_true",
+        default=True,
+        help="Enable decoupled 60 FPS asynchronous acquisition and rendering engine (default: True).",
+    )
+    p_cam.add_argument(
+        "--no-async",
+        dest="async_mode",
+        action="store_false",
+        help="Run in synchronous single-threaded capture mode.",
+    )
     p_cam.set_defaults(func=_handle_camera)
 
     # -------------------------------------------------------------------------
@@ -428,6 +447,9 @@ def _handle_camera(args: argparse.Namespace) -> int:
             mesh_style=getattr(args, "mesh_style", "wireframe"),
             live_fx=getattr(args, "live_fx", False),
             live_fx_style=getattr(args, "live_fx_style", "scan"),
+            effect=getattr(args, "effect", None),
+            async_mode=getattr(args, "async_mode", True),
+            target_fps=60.0,
         )
         return 0
     except DetekFaceError as err:

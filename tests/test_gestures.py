@@ -19,11 +19,9 @@ from typing import List
 from unittest.mock import MagicMock
 import pytest
 
-import detekface
 from detekface import (
     BoundingBox,
     FaceDetection,
-    FaceLandmarks,
     GestureConfig,
     GestureDetector,
     GestureEvent,
