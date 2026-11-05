@@ -1,10 +1,12 @@
 """Live webcam capture, customizable face overlay rendering, and camera session management."""
 
 from pathlib import Path
+import time
 from typing import Callable, Iterator, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
+from detekface.async_cam import AsyncCameraEngine, CameraMetrics
 from detekface.capture import capture
 from detekface.detector import FaceDetector
 from detekface.drawing import (
@@ -61,6 +63,9 @@ class CameraSession:
         resolution: Optional[Tuple[int, int]] = None,
         input_size: Optional[Tuple[int, int]] = None,
         analyze_face_shape: bool = False,
+        target_fps: float = 60.0,
+        async_mode: bool = False,
+        stale_timeout_sec: float = 0.5,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -70,6 +75,27 @@ class CameraSession:
         self._window_opened = False
         self.analyze_face_shape = bool(analyze_face_shape)
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
+
+        if not isinstance(target_fps, (int, float)) or isinstance(target_fps, bool) or target_fps <= 0:
+            raise ConfigurationError(
+                message=f"target_fps must be a positive number, got {target_fps}.",
+                hint="Provide a valid frame rate like 60.0 or 30.0.",
+            )
+        self.target_fps = float(target_fps)
+
+        if not isinstance(async_mode, bool):
+            raise ConfigurationError(
+                message=f"async_mode must be a boolean, got {type(async_mode).__name__}.",
+                hint="Set async_mode=True or async_mode=False.",
+            )
+        self.async_mode = bool(async_mode)
+
+        if not isinstance(stale_timeout_sec, (int, float)) or isinstance(stale_timeout_sec, bool) or stale_timeout_sec <= 0:
+            raise ConfigurationError(
+                message=f"stale_timeout_sec must be a positive number, got {stale_timeout_sec}.",
+                hint="Set stale_timeout_sec to a duration in seconds like 0.5.",
+            )
+        self.stale_timeout_sec = float(stale_timeout_sec)
 
         if resolution is not None:
             if (
@@ -105,10 +131,15 @@ class CameraSession:
             self.detector = detector
 
         self._cap: Optional[cv2.VideoCapture] = None
+        self._async_engine: Optional[AsyncCameraEngine] = None
         self._latest_frame: Optional[np.ndarray] = None
         self._latest_result: Optional[DetectionResult] = None
         self._fps_counter = FPSCounter(window_size=30)
         self._frames_read: int = 0
+        self._actual_width: int = 0
+        self._actual_height: int = 0
+        self._actual_hardware_fps: float = 0.0
+        self._last_inference_latency_ms: float = 0.0
 
         if auto_open:
             self.open()
@@ -136,7 +167,39 @@ class CameraSession:
     @property
     def fps(self) -> float:
         """Return current smoothed real-time processing FPS throughput."""
+        if self.async_mode and self._async_engine is not None:
+            return self._async_engine.metrics.render_fps
         return self._fps_counter.fps
+
+    @property
+    def actual_width(self) -> int:
+        """Negotiated camera hardware frame width."""
+        return self._actual_width
+
+    @property
+    def actual_height(self) -> int:
+        """Negotiated camera hardware frame height."""
+        return self._actual_height
+
+    @property
+    def actual_hardware_fps(self) -> float:
+        """Reported hardware capture FPS negotiated with device driver."""
+        return self._actual_hardware_fps
+
+    @property
+    def metrics(self) -> CameraMetrics:
+        """Real-time performance telemetry metrics and verified camera properties."""
+        if self._async_engine is not None:
+            return self._async_engine.metrics
+        return CameraMetrics(
+            capture_fps=self._fps_counter.fps,
+            inference_fps=self._fps_counter.fps,
+            render_fps=self._fps_counter.fps,
+            inference_latency_ms=self._last_inference_latency_ms,
+            actual_width=self._actual_width,
+            actual_height=self._actual_height,
+            hardware_fps=self._actual_hardware_fps,
+        )
 
     @property
     def frames_read(self) -> int:
@@ -169,7 +232,26 @@ class CameraSession:
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
 
+        cap.set(cv2.CAP_PROP_FPS, self.target_fps)
+
+        self._actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        self._actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        self._actual_hardware_fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0)
+
         self._cap = cap
+
+        if self.async_mode:
+            self._async_engine = AsyncCameraEngine(
+                camera_index=self.camera_index,
+                mirror=self.mirror,
+                detector=self.detector,
+                target_fps=self.target_fps,
+                resolution=self.resolution,
+                analyze_face_shape=self.analyze_face_shape,
+                stale_timeout_sec=self.stale_timeout_sec,
+            )
+            self._async_engine.start(cap=self._cap)
+
         return self
 
     def close(self) -> None:
@@ -177,6 +259,10 @@ class CameraSession:
 
         This method is idempotent and safe to call multiple times.
         """
+        if self._async_engine is not None:
+            self._async_engine.stop()
+            self._async_engine = None
+
         if self._cap is not None:
             self._cap.release()
             self._cap = None
@@ -218,6 +304,17 @@ class CameraSession:
                 hint="Call session.open() or use the session within a 'with detekface.open_camera():' context manager.",
             )
 
+        if self.async_mode and self._async_engine is not None:
+            frame, _, _ = self._async_engine.get_latest_state(timeout=1.0)
+            if frame is None:
+                raise CameraReadError(
+                    message=f"Failed to read video frame from camera index {self.camera_index}.",
+                    hint="The camera may have been disconnected or encountered a hardware/driver error.",
+                )
+            self._latest_frame = frame
+            self._frames_read += 1
+            return frame
+
         ret, frame = self._cap.read()
         if not ret or frame is None:
             raise CameraReadError(
@@ -245,8 +342,30 @@ class CameraSession:
             CameraError: If the camera session is not open.
             CameraReadError: If reading a frame from the hardware fails.
         """
+        if not self.is_open or self._cap is None:
+            raise CameraError(
+                message="Cannot read from a closed CameraSession.",
+                hint="Call session.open() or use the session within a 'with detekface.open_camera():' context manager.",
+            )
+
+        if self.async_mode and self._async_engine is not None:
+            frame, faces, _ = self._async_engine.get_latest_state(timeout=1.0)
+            if frame is None:
+                raise CameraReadError(
+                    message=f"Failed to read video frame from camera index {self.camera_index}.",
+                    hint="The camera may have been disconnected or encountered a hardware/driver error.",
+                )
+            self._latest_frame = frame
+            self._frames_read += 1
+            result = DetectionResult(faces=faces, image=frame)
+            self._latest_result = result
+            return result
+
         clean_frame = self.read_raw()
+        t0 = time.perf_counter()
         result = self.detector.detect(clean_frame, analyze_face_shape=self.analyze_face_shape)
+        self._last_inference_latency_ms = (time.perf_counter() - t0) * 1000.0
+
         if self.analyze_face_shape and self._shape_tracker is not None:
             smoothed_faces = self._shape_tracker.update(result.faces)
             result = DetectionResult(faces=smoothed_faces, image=clean_frame)
@@ -504,6 +623,9 @@ def open_camera(
     resolution: Optional[Tuple[int, int]] = None,
     input_size: Optional[Tuple[int, int]] = None,
     analyze_face_shape: bool = False,
+    target_fps: float = 60.0,
+    async_mode: bool = False,
+    stale_timeout_sec: float = 0.5,
 ) -> CameraSession:
     """Open and return a managed CameraSession context manager.
 
@@ -523,6 +645,12 @@ def open_camera(
     kwargs = {}
     if analyze_face_shape:
         kwargs["analyze_face_shape"] = True
+    if target_fps != 60.0:
+        kwargs["target_fps"] = target_fps
+    if async_mode:
+        kwargs["async_mode"] = True
+    if stale_timeout_sec != 0.5:
+        kwargs["stale_timeout_sec"] = stale_timeout_sec
 
     return CameraSession(
         camera_index=camera_index,
@@ -571,6 +699,9 @@ def camera(
     show_scan: Optional[bool] = None,
     live_fx: bool = False,
     live_fx_style: str = "scan",
+    target_fps: float = 60.0,
+    async_mode: bool = False,
+    stale_timeout_sec: float = 0.5,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -671,6 +802,22 @@ def camera(
 
     from detekface.mesh import validate_mesh_style
 
+    if not isinstance(target_fps, (int, float)) or isinstance(target_fps, bool) or target_fps <= 0:
+        raise ConfigurationError(
+            message=f"target_fps must be a positive number, got {target_fps}.",
+            hint="Set target_fps=60.0 or target_fps=30.0.",
+        )
+    if not isinstance(async_mode, bool):
+        raise ConfigurationError(
+            message=f"async_mode must be a boolean, got {type(async_mode).__name__}.",
+            hint="Set async_mode=True or async_mode=False.",
+        )
+    if not isinstance(stale_timeout_sec, (int, float)) or isinstance(stale_timeout_sec, bool) or stale_timeout_sec <= 0:
+        raise ConfigurationError(
+            message=f"stale_timeout_sec must be a positive number, got {stale_timeout_sec}.",
+            hint="Set stale_timeout_sec to a duration in seconds like 0.5.",
+        )
+
     valid_mesh_style = validate_mesh_style(mesh_style)
 
     if not isinstance(live_fx, bool):
@@ -700,6 +847,9 @@ def camera(
         auto_open=False,
         resolution=resolution,
         input_size=input_size,
+        target_fps=target_fps,
+        async_mode=async_mode,
+        stale_timeout_sec=stale_timeout_sec,
         **session_kwargs,
     )
 
@@ -714,6 +864,7 @@ def camera(
         session.open()
 
         while True:
+            t_loop_start = time.perf_counter()
             result = session.read()
             assert session.latest_frame is not None
             display_frame = session.latest_frame.copy()
@@ -738,7 +889,12 @@ def camera(
             if live_fx:
                 if fx_renderer is None:
                     fx_renderer = LiveFXRenderer(style=valid_live_fx_style, color=bgr_color)
-                fx_renderer.render(display_frame, faces=result.faces, copy=False)
+                fx_renderer.render(
+                    display_frame,
+                    faces=result.faces,
+                    timestamp=time.perf_counter(),
+                    copy=False,
+                )
 
             # Layer 3: Primary face overlay shapes
             draw_faces(
@@ -799,8 +955,14 @@ def camera(
             if max_frames is not None and frames_processed >= max_frames:
                 break
 
-            # Check keyboard input
-            key = cv2.waitKey(1) & 0xFF
+            # Check keyboard input with frame-rate throttling if async_mode
+            if async_mode:
+                elapsed = time.perf_counter() - t_loop_start
+                target_interval = 1.0 / max(1.0, float(target_fps))
+                delay_ms = max(1, int(round((target_interval - elapsed) * 1000.0)))
+                key = cv2.waitKey(delay_ms) & 0xFF
+            else:
+                key = cv2.waitKey(1) & 0xFF
 
             # Close preview on 'q', 'Q', or Escape (27)
             if key in (ord("q"), ord("Q"), 27):

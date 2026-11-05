@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
+from detekface.async_cam import AsyncCameraEngine, CameraMetrics, TimestampedFrame
 from detekface.batch import BatchDetectionResult, BatchItemResult
 from detekface.camera import CameraSession, camera, open_camera
 from detekface.capture import capture
@@ -103,7 +104,7 @@ from detekface.live_fx import (
 )
 from detekface.video import SUPPORTED_VIDEO_EXTENSIONS, video
 
-__version__: str = "0.2.0"
+__version__: str = "0.3.0"
 
 _detector_cache: Dict[Tuple, FaceDetector] = {}
 
@@ -268,6 +269,9 @@ __all__: List[str] = [
     "camera",
     "open_camera",
     "CameraSession",
+    "AsyncCameraEngine",
+    "CameraMetrics",
+    "TimestampedFrame",
     "capture",
     "video",
     "draw_faces",
