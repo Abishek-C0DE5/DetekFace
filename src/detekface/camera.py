@@ -27,6 +27,7 @@ from detekface.exceptions import (
 )
 from detekface.types import DetectionResult, FaceCapture, FaceDetection
 from detekface.face_shape import TemporalShapeTracker, draw_face_shape_overlay
+from detekface.gestures import GestureConfig, GestureDetector, GestureEvent
 from detekface.pose import TemporalPoseSmoother
 from detekface.tracking import FaceTracker
 
@@ -70,6 +71,11 @@ class CameraSession:
         target_fps: float = 60.0,
         async_mode: bool = False,
         stale_timeout_sec: float = 0.5,
+        detect_gestures: bool = False,
+        on_gesture: Optional[Callable[[GestureEvent], None]] = None,
+        gestures: Optional[Sequence[str]] = None,
+        gesture_config: Optional[GestureConfig] = None,
+        show_gestures: bool = False,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -78,11 +84,26 @@ class CameraSession:
         self.window_title = window_title or "detekface - Camera Session"
         self._window_opened = False
         self.analyze_face_shape = bool(analyze_face_shape)
-        self.track_faces = bool(track_faces)
-        self.estimate_pose = bool(estimate_pose)
+        self.detect_gestures = bool(detect_gestures or on_gesture is not None)
+        self.on_gesture = on_gesture
+        self.show_gestures = bool(show_gestures)
+
+        # Gestures require tracking and pose estimation
+        self.track_faces = bool(track_faces or self.detect_gestures)
+        self.estimate_pose = bool(estimate_pose or self.detect_gestures)
+
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
         self._tracker = FaceTracker() if self.track_faces else None
         self._pose_smoother = TemporalPoseSmoother() if self.estimate_pose else None
+        self._gesture_detector = (
+            GestureDetector(
+                config=gesture_config,
+                on_gesture=on_gesture,
+                enabled_gestures=gestures,
+            )
+            if self.detect_gestures
+            else None
+        )
 
         if not isinstance(track_faces, bool):
             raise ConfigurationError(
@@ -304,6 +325,9 @@ class CameraSession:
         if self._pose_smoother is not None:
             self._pose_smoother.reset()
 
+        if self._gesture_detector is not None:
+            self._gesture_detector.reset()
+
         self._latest_frame = None
         self._latest_result = None
 
@@ -424,6 +448,26 @@ class CameraSession:
         if self.track_faces and self._tracker is not None:
             faces = self._tracker.update(faces)
 
+        if self.detect_gestures and self._gesture_detector is not None:
+            from dataclasses import replace
+
+            active_events = self._gesture_detector.process(faces, clean_frame.shape[:2])
+            if active_events:
+                events_by_key = {}
+                for ev in active_events:
+                    k = ev.track_id if ev.track_id is not None else ev.face_index
+                    events_by_key.setdefault(k, []).append(ev.name)
+
+                faces_with_g = []
+                for idx, face in enumerate(faces):
+                    k = face.track_id if face.track_id is not None else idx
+                    g_list = events_by_key.get(k)
+                    if g_list:
+                        faces_with_g.append(replace(face, gestures=g_list))
+                    else:
+                        faces_with_g.append(face)
+                faces = faces_with_g
+
         result = DetectionResult(faces=faces, image=clean_frame)
         self._latest_result = result
         return result
@@ -537,6 +581,7 @@ class CameraSession:
         show_scan: Optional[bool] = None,
         live_fx: bool = False,
         live_fx_style: str = "scan",
+        show_gestures: bool = False,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -596,6 +641,9 @@ class CameraSession:
             color=bgr_color,
             thickness=valid_thickness,
             show_confidence=show_confidence,
+            show_tracking_ids=self.track_faces,
+            show_pose=self.estimate_pose,
+            show_gestures=show_gestures or self.show_gestures,
             copy=False,
         )
 
@@ -684,6 +732,11 @@ def open_camera(
     target_fps: float = 60.0,
     async_mode: bool = False,
     stale_timeout_sec: float = 0.5,
+    detect_gestures: bool = False,
+    on_gesture: Optional[Callable[[GestureEvent], None]] = None,
+    gestures: Optional[Sequence[str]] = None,
+    gesture_config: Optional[GestureConfig] = None,
+    show_gestures: bool = False,
 ) -> CameraSession:
     """Open and return a managed CameraSession context manager.
 
@@ -713,6 +766,12 @@ def open_camera(
         kwargs["async_mode"] = True
     if stale_timeout_sec != 0.5:
         kwargs["stale_timeout_sec"] = stale_timeout_sec
+    if detect_gestures or on_gesture is not None:
+        kwargs["detect_gestures"] = True
+        kwargs["on_gesture"] = on_gesture
+        kwargs["gestures"] = gestures
+        kwargs["gesture_config"] = gesture_config
+        kwargs["show_gestures"] = show_gestures
 
     return CameraSession(
         camera_index=camera_index,
@@ -768,6 +827,11 @@ def camera(
     show_tracking_ids: bool = False,
     show_pose: bool = False,
     estimate_pose: bool = False,
+    detect_gestures: bool = False,
+    on_gesture: Optional[Callable[[GestureEvent], None]] = None,
+    gestures: Optional[Sequence[str]] = None,
+    gesture_config: Optional[GestureConfig] = None,
+    show_gestures: bool = False,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -904,6 +968,24 @@ def camera(
             message=f"estimate_pose must be a boolean, got {type(estimate_pose).__name__}.",
             hint="Set estimate_pose=True or estimate_pose=False.",
         )
+    if not isinstance(detect_gestures, bool):
+        raise ConfigurationError(
+            message=f"detect_gestures must be a boolean, got {type(detect_gestures).__name__}.",
+            hint="Set detect_gestures=True or detect_gestures=False.",
+        )
+    if not isinstance(show_gestures, bool):
+        raise ConfigurationError(
+            message=f"show_gestures must be a boolean, got {type(show_gestures).__name__}.",
+            hint="Set show_gestures=True or show_gestures=False.",
+        )
+
+    if on_gesture is not None or show_gestures:
+        detect_gestures = True
+
+    if detect_gestures:
+        track_faces = True
+        estimate_pose = True
+
     if show_tracking_ids:
         track_faces = True
     if show_pose:
@@ -921,7 +1003,7 @@ def camera(
 
     valid_live_fx_style = validate_live_fx_style(live_fx_style)
 
-    if show_mesh or live_fx:
+    if show_mesh or live_fx or detect_gestures:
         analyze_face_shape = True
 
     session_kwargs = {}
@@ -931,6 +1013,12 @@ def camera(
         session_kwargs["track_faces"] = True
     if estimate_pose:
         session_kwargs["estimate_pose"] = True
+    if detect_gestures:
+        session_kwargs["detect_gestures"] = True
+        session_kwargs["on_gesture"] = on_gesture
+        session_kwargs["gestures"] = gestures
+        session_kwargs["gesture_config"] = gesture_config
+        session_kwargs["show_gestures"] = show_gestures
 
     session = CameraSession(
         camera_index=camera_index,
@@ -1001,6 +1089,7 @@ def camera(
                 show_confidence=show_confidence,
                 show_tracking_ids=show_tracking_ids,
                 show_pose=show_pose,
+                show_gestures=show_gestures,
                 copy=False,
             )
 

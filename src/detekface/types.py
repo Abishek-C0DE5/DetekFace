@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Union
 import cv2
 import numpy as np
 
@@ -263,6 +263,31 @@ class HeadPose:
 
 
 @dataclass(frozen=True)
+class GestureEvent:
+    """Event emitted when an observable facial gesture is detected.
+
+    Attributes:
+        name: Canonical gesture name (e.g. 'mouth_opening', 'left_eye_blink').
+        track_id: Temporary tracking identifier of the face (if tracking is active).
+        face_index: Positional index of the face within the current frame detections.
+        timestamp: Wall-clock timestamp (seconds) when the gesture event occurred.
+        confidence: Estimated confidence / intensity of the gesture (0.0 to 1.0).
+        duration: Duration (seconds) the gesture state was observed.
+        state: Event trigger state ('action', 'start', 'end').
+        metadata: Underlying metrics dictionary (e.g. angles, aspect ratios).
+    """
+
+    name: str
+    track_id: Optional[int] = None
+    face_index: int = 0
+    timestamp: float = 0.0
+    confidence: float = 1.0
+    duration: float = 0.0
+    state: str = "action"
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class FaceDetection:
     """A single face detected in an image.
 
@@ -274,6 +299,8 @@ class FaceDetection:
         dense_landmarks: Sequence of dense facial keypoints (e.g. 478 points) if extracted, otherwise None.
         track_id: Temporary tracking identifier for video/camera continuity (not persistent identity).
         head_pose: Estimated 3D head pose orientation (yaw, pitch, roll in degrees) if enabled.
+        gestures: List of active gesture names currently observed on this face.
+        blendshapes: Dictionary mapping blendshape category names to confidence scores (0.0 to 1.0).
     """
 
     bbox: BoundingBox
@@ -283,6 +310,8 @@ class FaceDetection:
     dense_landmarks: Optional[List[Point]] = None
     track_id: Optional[int] = None
     head_pose: Optional[HeadPose] = None
+    gestures: Optional[List[str]] = None
+    blendshapes: Optional[Dict[str, float]] = None
 
     @property
     def box(self) -> BoundingBox:

@@ -111,7 +111,7 @@ class DenseLandmarkExtractor:
             min_face_detection_confidence=min_confidence,
             min_face_presence_confidence=min_confidence,
             min_tracking_confidence=min_confidence,
-            output_face_blendshapes=False,
+            output_face_blendshapes=True,
             output_facial_transformation_matrixes=False,
         )
         self._landmarker = vision.FaceLandmarker.create_from_options(options)
@@ -132,8 +132,22 @@ class DenseLandmarkExtractor:
         Returns:
             List of landmark lists, each containing 478 Point instances.
         """
+        lms, _ = self.extract_with_blendshapes(bgr_image)
+        return lms
+
+    def extract_with_blendshapes(
+        self, bgr_image: np.ndarray
+    ) -> Tuple[List[List[Point]], List[Dict[str, float]]]:
+        """Extract both dense landmarks and blendshapes from an image for all visible faces.
+
+        Args:
+            bgr_image: BGR format NumPy uint8 image array.
+
+        Returns:
+            Tuple of (landmark_lists, blendshape_dicts).
+        """
         if not isinstance(bgr_image, np.ndarray) or bgr_image.size == 0:
-            return []
+            return [], []
 
         h, w = bgr_image.shape[:2]
         rgb = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2RGB)
@@ -141,14 +155,21 @@ class DenseLandmarkExtractor:
         detection_result = self._landmarker.detect(mp_image)
 
         all_faces: List[List[Point]] = []
+        all_blendshapes: List[Dict[str, float]] = []
+
         if not detection_result.face_landmarks:
-            return all_faces
+            return all_faces, all_blendshapes
 
         for face_lms in detection_result.face_landmarks:
             points: List[Point] = [Point(x=int(round(lm.x * w)), y=int(round(lm.y * h))) for lm in face_lms]
             all_faces.append(points)
 
-        return all_faces
+        if detection_result.face_blendshapes:
+            for face_bs in detection_result.face_blendshapes:
+                bs_dict = {category.category_name: category.score for category in face_bs}
+                all_blendshapes.append(bs_dict)
+
+        return all_faces, all_blendshapes
 
 
 def _euclidean_dist(p1: Point, p2: Point) -> float:
@@ -384,6 +405,7 @@ def match_and_attach_face_shapes(
     landmark_sets: List[List[Point]],
     image_shape: Tuple[int, int],
     skip_shape_analysis: bool = False,
+    blendshape_sets: Optional[List[Dict[str, float]]] = None,
 ) -> List[FaceDetection]:
     """Associate extracted dense landmarks with detected face bounding boxes and perform analysis.
 
@@ -393,9 +415,10 @@ def match_and_attach_face_shapes(
         image_shape: Dimensions of the image as (height, width).
         skip_shape_analysis: If True, attaches dense landmarks for mesh visualization without
             calculating geometric face shape proportions or setting face_shape.
+        blendshape_sets: Optional extracted blendshape dictionaries associated with landmarks.
 
     Returns:
-        List of FaceDetection objects with face_shape and dense_landmarks attached.
+        List of FaceDetection objects with face_shape, dense_landmarks, and optional blendshapes attached.
     """
     if not faces:
         return []
@@ -419,6 +442,7 @@ def match_and_attach_face_shapes(
 
     # Match each face bounding box to the closest landmark cluster center
     unassigned_lms = list(landmark_sets)
+    unassigned_bs = list(blendshape_sets) if blendshape_sets else None
     enriched_faces: List[FaceDetection] = []
 
     for face in faces:
@@ -443,10 +467,22 @@ def match_and_attach_face_shapes(
 
         if best_idx is not None:
             matched_lms = unassigned_lms.pop(best_idx)
+            matched_bs = (
+                unassigned_bs.pop(best_idx)
+                if unassigned_bs and best_idx < len(unassigned_bs)
+                else None
+            )
             shape_result = None
             if not skip_shape_analysis:
                 shape_result = analyze_face_geometry(matched_lms, image_shape)
-            enriched_faces.append(replace(face, face_shape=shape_result, dense_landmarks=matched_lms))
+            enriched_faces.append(
+                replace(
+                    face,
+                    face_shape=shape_result,
+                    dense_landmarks=matched_lms,
+                    blendshapes=matched_bs,
+                )
+            )
         else:
             # Fallback if no matching landmark set
             shape_result = None

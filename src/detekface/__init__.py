@@ -73,6 +73,7 @@ from detekface.types import (
     FaceDetection,
     FaceLandmarks,
     FaceShapeResult,
+    GestureEvent,
     HeadPose,
     Point,
 )
@@ -81,6 +82,21 @@ from detekface.pose import (
     TemporalPoseSmoother,
     estimate_head_pose,
     project_pose_axes,
+)
+from detekface.gestures import (
+    ALL_GESTURES,
+    GESTURE_BOTH_EYES_CLOSED,
+    GESTURE_HEAD_TILT,
+    GESTURE_HEAD_TURN_LEFT,
+    GESTURE_HEAD_TURN_RIGHT,
+    GESTURE_LEFT_EYE_BLINK,
+    GESTURE_MOUTH_OPENING,
+    GESTURE_RIGHT_EYE_BLINK,
+    GestureConfig,
+    GestureDetector,
+    compute_eye_aspect_ratio,
+    compute_mouth_aspect_ratio,
+    normalize_gesture_name,
 )
 from detekface.face_shape import (
     SUPPORTED_FACE_SHAPES,
@@ -129,6 +145,7 @@ def detect(
     analyze_face_shape: bool = False,
     mesh: bool = False,
     estimate_pose: bool = False,
+    detect_gestures: bool = False,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -180,6 +197,15 @@ def detect(
                 backend=backend,
             )
         _detector_cache[cache_key] = detector
+
+    if detect_gestures:
+        return detector.detect(
+            image,
+            analyze_face_shape=analyze_face_shape,
+            mesh=mesh,
+            estimate_pose=estimate_pose,
+            detect_gestures=True,
+        )
 
     return detector.detect(
         image,
@@ -295,6 +321,20 @@ __all__: List[str] = [
     "TemporalPoseSmoother",
     "project_pose_axes",
     "draw_pose_axes",
+    "GestureDetector",
+    "GestureConfig",
+    "GestureEvent",
+    "GESTURE_LEFT_EYE_BLINK",
+    "GESTURE_RIGHT_EYE_BLINK",
+    "GESTURE_BOTH_EYES_CLOSED",
+    "GESTURE_MOUTH_OPENING",
+    "GESTURE_HEAD_TILT",
+    "GESTURE_HEAD_TURN_LEFT",
+    "GESTURE_HEAD_TURN_RIGHT",
+    "ALL_GESTURES",
+    "compute_eye_aspect_ratio",
+    "compute_mouth_aspect_ratio",
+    "normalize_gesture_name",
     "draw_faces",
     "draw_face_overlay",
     "draw_metrics_overlay",

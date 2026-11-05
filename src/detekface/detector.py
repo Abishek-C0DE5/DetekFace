@@ -324,6 +324,7 @@ class FaceDetector:
         analyze_face_shape: bool = False,
         mesh: bool = False,
         estimate_pose: bool = False,
+        detect_gestures: bool = False,
     ) -> DetectionResult:
         """Perform face detection on a single image.
 
@@ -357,19 +358,34 @@ class FaceDetector:
         else:
             faces = self._backend.detect(bgr_image)
 
-        if analyze_face_shape or mesh:
+        if analyze_face_shape or mesh or detect_gestures:
             from detekface.face_shape import DenseLandmarkExtractor, match_and_attach_face_shapes
 
             extractor = DenseLandmarkExtractor.get_default(cache_dir=self._cache_dir)
-            landmark_sets = extractor.extract(bgr_image)
+            if detect_gestures and hasattr(extractor, "extract_with_blendshapes"):
+                try:
+                    res = extractor.extract_with_blendshapes(bgr_image)
+                    if isinstance(res, tuple) and len(res) == 2:
+                        landmark_sets, blendshape_sets = res
+                    else:
+                        landmark_sets = extractor.extract(bgr_image)
+                        blendshape_sets = None
+                except Exception:
+                    landmark_sets = extractor.extract(bgr_image)
+                    blendshape_sets = None
+            else:
+                landmark_sets = extractor.extract(bgr_image)
+                blendshape_sets = None
+
             faces = match_and_attach_face_shapes(
                 faces,
                 landmark_sets,
                 image_shape=(height, width),
-                skip_shape_analysis=bool(mesh and not analyze_face_shape),
+                skip_shape_analysis=bool((mesh or detect_gestures) and not analyze_face_shape),
+                blendshape_sets=blendshape_sets,
             )
 
-        if estimate_pose:
+        if estimate_pose or detect_gestures:
             from detekface.pose import estimate_head_pose
 
             faces_with_pose = []
@@ -384,9 +400,25 @@ class FaceDetector:
                         dense_landmarks=face.dense_landmarks,
                         track_id=face.track_id,
                         head_pose=pose,
+                        blendshapes=face.blendshapes,
                     )
                 )
             faces = faces_with_pose
+
+        if detect_gestures:
+            from dataclasses import replace
+            from detekface.gestures import GestureDetector
+
+            g_det = GestureDetector()
+            events = g_det.process(faces, image_shape=(height, width))
+            if events:
+                events_by_idx = {}
+                for ev in events:
+                    events_by_idx.setdefault(ev.face_index, []).append(ev.name)
+                faces = [
+                    replace(face, gestures=events_by_idx[i]) if i in events_by_idx else face
+                    for i, face in enumerate(faces)
+                ]
 
         return DetectionResult(faces=faces, image=bgr_image)
 

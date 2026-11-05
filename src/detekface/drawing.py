@@ -415,6 +415,7 @@ def draw_face_overlay(
     show_confidence: bool = False,
     show_tracking_ids: bool = False,
     show_pose: bool = False,
+    show_gestures: bool = False,
     copy: bool = True,
 ) -> np.ndarray:
     """Draw a face overlay on an image for a single face detection.
@@ -428,6 +429,7 @@ def draw_face_overlay(
         show_confidence: Whether to display the detection confidence score near the face (default False).
         show_tracking_ids: Whether to display temporary face tracking ID (e.g. Face ID: 1).
         show_pose: Whether to display estimated 3D head pose orientation angles and axes.
+        show_gestures: Whether to display active gesture tags on the face HUD.
         copy: Whether to copy the image before drawing (default True, ensuring the original is untouched).
 
     Returns:
@@ -471,7 +473,7 @@ def draw_face_overlay(
             show_confidence=show_confidence,
         )
 
-    # Render tracking ID, confidence, and head-pose labels
+    # Render tracking ID, confidence, head-pose, and gesture labels
     badges = []
     if show_tracking_ids and face.track_id is not None:
         badges.append(f"Face ID: {face.track_id}")
@@ -480,6 +482,8 @@ def draw_face_overlay(
     if show_pose and face.head_pose is not None:
         hp = face.head_pose
         badges.append(f"Y:{hp.yaw:+.0f}\u00b0 P:{hp.pitch:+.0f}\u00b0 R:{hp.roll:+.0f}\u00b0")
+    if show_gestures and face.gestures:
+        badges.append(f"[{', '.join(face.gestures)}]")
 
     if badges:
         badge_text = " | ".join(badges)
@@ -509,6 +513,7 @@ def draw_faces(
     show_confidence: bool = False,
     show_tracking_ids: bool = False,
     show_pose: bool = False,
+    show_gestures: bool = False,
     copy: bool = True,
 ) -> np.ndarray:
     """Draw face overlays for multiple detected faces onto an image.
@@ -524,6 +529,7 @@ def draw_faces(
         show_confidence: Whether to render confidence percentages near each face (default False).
         show_tracking_ids: Whether to render temporary tracking IDs near each face (default False).
         show_pose: Whether to render head pose orientation badges and 3D axes (default False).
+        show_gestures: Whether to display active gesture badges (default False).
         copy: Whether to copy the image before drawing (default True).
 
     Returns:
@@ -543,6 +549,7 @@ def draw_faces(
             show_confidence=show_confidence,
             show_tracking_ids=show_tracking_ids,
             show_pose=show_pose,
+            show_gestures=show_gestures,
             copy=False,
         )
 
