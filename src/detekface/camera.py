@@ -25,8 +25,10 @@ from detekface.exceptions import (
     ConfigurationError,
     NoFaceDetectedError,
 )
-from detekface.types import DetectionResult, FaceCapture
+from detekface.types import DetectionResult, FaceCapture, FaceDetection
 from detekface.face_shape import TemporalShapeTracker, draw_face_shape_overlay
+from detekface.pose import TemporalPoseSmoother
+from detekface.tracking import FaceTracker
 
 
 class CameraSession:
@@ -63,6 +65,8 @@ class CameraSession:
         resolution: Optional[Tuple[int, int]] = None,
         input_size: Optional[Tuple[int, int]] = None,
         analyze_face_shape: bool = False,
+        track_faces: bool = False,
+        estimate_pose: bool = False,
         target_fps: float = 60.0,
         async_mode: bool = False,
         stale_timeout_sec: float = 0.5,
@@ -74,7 +78,22 @@ class CameraSession:
         self.window_title = window_title or "detekface - Camera Session"
         self._window_opened = False
         self.analyze_face_shape = bool(analyze_face_shape)
+        self.track_faces = bool(track_faces)
+        self.estimate_pose = bool(estimate_pose)
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
+        self._tracker = FaceTracker() if self.track_faces else None
+        self._pose_smoother = TemporalPoseSmoother() if self.estimate_pose else None
+
+        if not isinstance(track_faces, bool):
+            raise ConfigurationError(
+                message=f"track_faces must be a boolean, got {type(track_faces).__name__}.",
+                hint="Set track_faces=True or track_faces=False.",
+            )
+        if not isinstance(estimate_pose, bool):
+            raise ConfigurationError(
+                message=f"estimate_pose must be a boolean, got {type(estimate_pose).__name__}.",
+                hint="Set estimate_pose=True or estimate_pose=False.",
+            )
 
         if not isinstance(target_fps, (int, float)) or isinstance(target_fps, bool) or target_fps <= 0:
             raise ConfigurationError(
@@ -90,11 +109,7 @@ class CameraSession:
             )
         self.async_mode = bool(async_mode)
 
-        if (
-            not isinstance(stale_timeout_sec, (int, float))
-            or isinstance(stale_timeout_sec, bool)
-            or stale_timeout_sec <= 0
-        ):
+        if not isinstance(stale_timeout_sec, (int, float)) or isinstance(stale_timeout_sec, bool) or stale_timeout_sec <= 0:
             raise ConfigurationError(
                 message=f"stale_timeout_sec must be a positive number, got {stale_timeout_sec}.",
                 hint="Set stale_timeout_sec to a duration in seconds like 0.5.",
@@ -252,6 +267,8 @@ class CameraSession:
                 target_fps=self.target_fps,
                 resolution=self.resolution,
                 analyze_face_shape=self.analyze_face_shape,
+                track_faces=self.track_faces,
+                estimate_pose=self.estimate_pose,
                 stale_timeout_sec=self.stale_timeout_sec,
             )
             self._async_engine.start(cap=self._cap)
@@ -280,6 +297,12 @@ class CameraSession:
 
         if self._shape_tracker is not None:
             self._shape_tracker.reset()
+
+        if self._tracker is not None:
+            self._tracker.reset()
+
+        if self._pose_smoother is not None:
+            self._pose_smoother.reset()
 
         self._latest_frame = None
         self._latest_result = None
@@ -367,12 +390,41 @@ class CameraSession:
 
         clean_frame = self.read_raw()
         t0 = time.perf_counter()
-        result = self.detector.detect(clean_frame, analyze_face_shape=self.analyze_face_shape)
+        result = self.detector.detect(
+            clean_frame,
+            analyze_face_shape=self.analyze_face_shape,
+            estimate_pose=self.estimate_pose,
+        )
         self._last_inference_latency_ms = (time.perf_counter() - t0) * 1000.0
 
+        faces = result.faces
         if self.analyze_face_shape and self._shape_tracker is not None:
-            smoothed_faces = self._shape_tracker.update(result.faces)
-            result = DetectionResult(faces=smoothed_faces, image=clean_frame)
+            faces = self._shape_tracker.update(faces)
+
+        if self.estimate_pose and self._pose_smoother is not None:
+            smoothed_pose_faces = []
+            for face in faces:
+                if face.head_pose is not None:
+                    sp = self._pose_smoother.smooth(face.head_pose, track_id=face.track_id)
+                    smoothed_pose_faces.append(
+                        FaceDetection(
+                            bbox=face.bbox,
+                            confidence=face.confidence,
+                            landmarks=face.landmarks,
+                            face_shape=face.face_shape,
+                            dense_landmarks=face.dense_landmarks,
+                            track_id=face.track_id,
+                            head_pose=sp,
+                        )
+                    )
+                else:
+                    smoothed_pose_faces.append(face)
+            faces = smoothed_pose_faces
+
+        if self.track_faces and self._tracker is not None:
+            faces = self._tracker.update(faces)
+
+        result = DetectionResult(faces=faces, image=clean_frame)
         self._latest_result = result
         return result
 
@@ -627,6 +679,8 @@ def open_camera(
     resolution: Optional[Tuple[int, int]] = None,
     input_size: Optional[Tuple[int, int]] = None,
     analyze_face_shape: bool = False,
+    track_faces: bool = False,
+    estimate_pose: bool = False,
     target_fps: float = 60.0,
     async_mode: bool = False,
     stale_timeout_sec: float = 0.5,
@@ -649,6 +703,10 @@ def open_camera(
     kwargs = {}
     if analyze_face_shape:
         kwargs["analyze_face_shape"] = True
+    if track_faces:
+        kwargs["track_faces"] = True
+    if estimate_pose:
+        kwargs["estimate_pose"] = True
     if target_fps != 60.0:
         kwargs["target_fps"] = target_fps
     if async_mode:
@@ -706,6 +764,10 @@ def camera(
     target_fps: float = 60.0,
     async_mode: bool = False,
     stale_timeout_sec: float = 0.5,
+    track_faces: bool = False,
+    show_tracking_ids: bool = False,
+    show_pose: bool = False,
+    estimate_pose: bool = False,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -822,6 +884,31 @@ def camera(
             hint="Set stale_timeout_sec to a duration in seconds like 0.5.",
         )
 
+    if not isinstance(track_faces, bool):
+        raise ConfigurationError(
+            message=f"track_faces must be a boolean, got {type(track_faces).__name__}.",
+            hint="Set track_faces=True or track_faces=False.",
+        )
+    if not isinstance(show_tracking_ids, bool):
+        raise ConfigurationError(
+            message=f"show_tracking_ids must be a boolean, got {type(show_tracking_ids).__name__}.",
+            hint="Set show_tracking_ids=True or show_tracking_ids=False.",
+        )
+    if not isinstance(show_pose, bool):
+        raise ConfigurationError(
+            message=f"show_pose must be a boolean, got {type(show_pose).__name__}.",
+            hint="Set show_pose=True or show_pose=False.",
+        )
+    if not isinstance(estimate_pose, bool):
+        raise ConfigurationError(
+            message=f"estimate_pose must be a boolean, got {type(estimate_pose).__name__}.",
+            hint="Set estimate_pose=True or estimate_pose=False.",
+        )
+    if show_tracking_ids:
+        track_faces = True
+    if show_pose:
+        estimate_pose = True
+
     valid_mesh_style = validate_mesh_style(mesh_style)
 
     if not isinstance(live_fx, bool):
@@ -840,6 +927,10 @@ def camera(
     session_kwargs = {}
     if analyze_face_shape:
         session_kwargs["analyze_face_shape"] = True
+    if track_faces:
+        session_kwargs["track_faces"] = True
+    if estimate_pose:
+        session_kwargs["estimate_pose"] = True
 
     session = CameraSession(
         camera_index=camera_index,
@@ -908,6 +999,8 @@ def camera(
                 color=bgr_color,
                 thickness=valid_thickness,
                 show_confidence=show_confidence,
+                show_tracking_ids=show_tracking_ids,
+                show_pose=show_pose,
                 copy=False,
             )
 
@@ -978,7 +1071,9 @@ def camera(
 
                 show_mesh = True
                 curr_idx = (
-                    SUPPORTED_MESH_STYLES.index(valid_mesh_style) if valid_mesh_style in SUPPORTED_MESH_STYLES else 0
+                    SUPPORTED_MESH_STYLES.index(valid_mesh_style)
+                    if valid_mesh_style in SUPPORTED_MESH_STYLES
+                    else 0
                 )
                 valid_mesh_style = SUPPORTED_MESH_STYLES[(curr_idx + 1) % len(SUPPORTED_MESH_STYLES)]
                 feedback_text = f"Mesh: {valid_mesh_style}"

@@ -20,6 +20,7 @@ from detekface.drawing import (
     draw_face_overlay,
     draw_faces,
     draw_metrics_overlay,
+    draw_pose_axes,
     format_confidence,
     format_face_count,
     format_fps,
@@ -72,7 +73,14 @@ from detekface.types import (
     FaceDetection,
     FaceLandmarks,
     FaceShapeResult,
+    HeadPose,
     Point,
+)
+from detekface.tracking import FaceTracker, compute_iou
+from detekface.pose import (
+    TemporalPoseSmoother,
+    estimate_head_pose,
+    project_pose_axes,
 )
 from detekface.face_shape import (
     SUPPORTED_FACE_SHAPES,
@@ -120,6 +128,7 @@ def detect(
     input_size: Optional[Tuple[int, int]] = None,
     analyze_face_shape: bool = False,
     mesh: bool = False,
+    estimate_pose: bool = False,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -172,7 +181,12 @@ def detect(
             )
         _detector_cache[cache_key] = detector
 
-    return detector.detect(image, analyze_face_shape=analyze_face_shape, mesh=mesh)
+    return detector.detect(
+        image,
+        analyze_face_shape=analyze_face_shape,
+        mesh=mesh,
+        estimate_pose=estimate_pose,
+    )
 
 
 def detect_many(
@@ -274,6 +288,13 @@ __all__: List[str] = [
     "TimestampedFrame",
     "capture",
     "video",
+    "FaceTracker",
+    "compute_iou",
+    "HeadPose",
+    "estimate_head_pose",
+    "TemporalPoseSmoother",
+    "project_pose_axes",
+    "draw_pose_axes",
     "draw_faces",
     "draw_face_overlay",
     "draw_metrics_overlay",

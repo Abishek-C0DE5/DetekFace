@@ -236,6 +236,33 @@ class FaceShapeResult:
 
 
 @dataclass(frozen=True)
+class HeadPose:
+    """Estimated 3D head pose orientation angles (in degrees).
+
+    Coordinate convention:
+        - yaw: Left/right head rotation in degrees.
+               Positive = turning to subject's right (viewer's left).
+               Negative = turning to subject's left (viewer's right).
+        - pitch: Up/down head tilt in degrees.
+               Positive = looking upward.
+               Negative = looking downward.
+        - roll: In-plane lateral tilt in degrees.
+               Positive = tilting head toward subject's right shoulder.
+               Negative = tilting head toward subject's left shoulder.
+    """
+
+    yaw: float
+    pitch: float
+    roll: float
+    rotation_vector: Optional[np.ndarray] = None
+    translation_vector: Optional[np.ndarray] = None
+
+    def as_tuple(self) -> Tuple[float, float, float]:
+        """Return (yaw, pitch, roll) in degrees."""
+        return (self.yaw, self.pitch, self.roll)
+
+
+@dataclass(frozen=True)
 class FaceDetection:
     """A single face detected in an image.
 
@@ -245,6 +272,8 @@ class FaceDetection:
         landmarks: 5 facial key points if available, otherwise None.
         face_shape: FaceShapeResult if analyze_face_shape=True, otherwise None.
         dense_landmarks: Sequence of dense facial keypoints (e.g. 478 points) if extracted, otherwise None.
+        track_id: Temporary tracking identifier for video/camera continuity (not persistent identity).
+        head_pose: Estimated 3D head pose orientation (yaw, pitch, roll in degrees) if enabled.
     """
 
     bbox: BoundingBox
@@ -252,6 +281,8 @@ class FaceDetection:
     landmarks: Optional[FaceLandmarks] = None
     face_shape: Optional[FaceShapeResult] = None
     dense_landmarks: Optional[List[Point]] = None
+    track_id: Optional[int] = None
+    head_pose: Optional[HeadPose] = None
 
     @property
     def box(self) -> BoundingBox:

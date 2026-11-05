@@ -21,7 +21,9 @@ from detekface.exceptions import (
     VideoNotFoundError,
     VideoWriteError,
 )
-from detekface.types import FaceCapture
+from detekface.types import DetectionResult, FaceCapture, FaceDetection
+from detekface.tracking import FaceTracker
+from detekface.pose import TemporalPoseSmoother
 
 SUPPORTED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".webm"}
 
@@ -48,6 +50,10 @@ def video(
     backend: str = "yunet",
     frame_skip: int = 0,
     input_size: Optional[Tuple[int, int]] = None,
+    track_faces: bool = False,
+    show_tracking_ids: bool = False,
+    show_pose: bool = False,
+    estimate_pose: bool = False,
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -217,6 +223,8 @@ def video(
 
     fps_counter = FPSCounter(window_size=30)
     frames_processed = 0
+    tracker = FaceTracker() if (track_faces or show_tracking_ids) else None
+    pose_smoother = TemporalPoseSmoother() if (estimate_pose or show_pose) else None
     latest_result = None
 
     feedback_text: str = ""
@@ -277,9 +285,31 @@ def video(
             # Perform face detection (reusing detections on skipped frames)
             should_detect = (frame_skip == 0) or (frames_processed % (frame_skip + 1) == 0) or (latest_result is None)
             if should_detect:
-                latest_result = detector.detect(clean_frame)
+                latest_result = detector.detect(clean_frame, estimate_pose=(estimate_pose or show_pose))
             assert latest_result is not None
-            result = latest_result
+            v_faces = latest_result.faces
+            if pose_smoother is not None:
+                smoothed_pose_faces = []
+                for face in v_faces:
+                    if face.head_pose is not None:
+                        sp = pose_smoother.smooth(face.head_pose, track_id=face.track_id)
+                        smoothed_pose_faces.append(
+                            FaceDetection(
+                                bbox=face.bbox,
+                                confidence=face.confidence,
+                                landmarks=face.landmarks,
+                                face_shape=face.face_shape,
+                                dense_landmarks=face.dense_landmarks,
+                                track_id=face.track_id,
+                                head_pose=sp,
+                            )
+                        )
+                    else:
+                        smoothed_pose_faces.append(face)
+                v_faces = smoothed_pose_faces
+            if tracker is not None:
+                v_faces = tracker.update(v_faces)
+            result = DetectionResult(faces=v_faces, image=clean_frame)
 
             # Draw overlays on display/output frame
             display_frame = frame
@@ -290,6 +320,8 @@ def video(
                 color=bgr_color,
                 thickness=valid_thickness,
                 show_confidence=show_confidence,
+                show_tracking_ids=show_tracking_ids,
+                show_pose=show_pose,
                 copy=False,
             )
 

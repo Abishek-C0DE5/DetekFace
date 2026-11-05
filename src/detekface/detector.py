@@ -323,6 +323,7 @@ class FaceDetector:
         image: Union[str, Path, np.ndarray],
         analyze_face_shape: bool = False,
         mesh: bool = False,
+        estimate_pose: bool = False,
     ) -> DetectionResult:
         """Perform face detection on a single image.
 
@@ -367,6 +368,25 @@ class FaceDetector:
                 image_shape=(height, width),
                 skip_shape_analysis=bool(mesh and not analyze_face_shape),
             )
+
+        if estimate_pose:
+            from detekface.pose import estimate_head_pose
+
+            faces_with_pose = []
+            for face in faces:
+                pose = estimate_head_pose(face, image_shape=(height, width))
+                faces_with_pose.append(
+                    FaceDetection(
+                        bbox=face.bbox,
+                        confidence=face.confidence,
+                        landmarks=face.landmarks,
+                        face_shape=face.face_shape,
+                        dense_landmarks=face.dense_landmarks,
+                        track_id=face.track_id,
+                        head_pose=pose,
+                    )
+                )
+            faces = faces_with_pose
 
         return DetectionResult(faces=faces, image=bgr_image)
 

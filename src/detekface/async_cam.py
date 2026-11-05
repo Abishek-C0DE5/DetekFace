@@ -25,6 +25,8 @@ from detekface.detector import FaceDetector
 from detekface.drawing import FPSCounter
 from detekface.exceptions import CameraNotFoundError, ConfigurationError
 from detekface.face_shape import TemporalShapeTracker
+from detekface.pose import TemporalPoseSmoother
+from detekface.tracking import FaceTracker
 from detekface.types import DetectionResult, FaceDetection
 
 
@@ -65,6 +67,8 @@ class AsyncCameraEngine:
         input_size: Optional[Tuple[int, int]] = None,
         analyze_face_shape: bool = False,
         mesh: bool = False,
+        track_faces: bool = False,
+        estimate_pose: bool = False,
         stale_timeout_sec: float = 0.5,
         queue_maxsize: int = 1,
     ) -> None:
@@ -74,7 +78,11 @@ class AsyncCameraEngine:
         self.stale_timeout_sec = max(0.05, float(stale_timeout_sec))
         self.analyze_face_shape = bool(analyze_face_shape)
         self.mesh = bool(mesh)
+        self.track_faces = bool(track_faces)
+        self.estimate_pose = bool(estimate_pose)
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
+        self._tracker = FaceTracker() if self.track_faces else None
+        self._pose_smoother = TemporalPoseSmoother() if self.estimate_pose else None
 
         if resolution is not None:
             if (
@@ -211,6 +219,12 @@ class AsyncCameraEngine:
             self._cap.release()
             self._cap = None
 
+        if self._tracker is not None:
+            self._tracker.reset()
+
+        if self._pose_smoother is not None:
+            self._pose_smoother.reset()
+
         # Drain frame queue
         while not self._frame_queue.empty():
             try:
@@ -268,10 +282,36 @@ class AsyncCameraEngine:
                     ts_frame.frame,
                     analyze_face_shape=self.analyze_face_shape,
                     mesh=self.mesh,
+                    estimate_pose=self.estimate_pose,
                 )
+                faces = res.faces
                 if self.analyze_face_shape and self._shape_tracker is not None:
-                    smoothed_faces = self._shape_tracker.update(res.faces)
-                    res = DetectionResult(faces=smoothed_faces, image=ts_frame.frame)
+                    faces = self._shape_tracker.update(faces)
+
+                if self.estimate_pose and self._pose_smoother is not None:
+                    smoothed_pose_faces = []
+                    for face in faces:
+                        if face.head_pose is not None:
+                            sp = self._pose_smoother.smooth(face.head_pose, track_id=face.track_id)
+                            smoothed_pose_faces.append(
+                                FaceDetection(
+                                    bbox=face.bbox,
+                                    confidence=face.confidence,
+                                    landmarks=face.landmarks,
+                                    face_shape=face.face_shape,
+                                    dense_landmarks=face.dense_landmarks,
+                                    track_id=face.track_id,
+                                    head_pose=sp,
+                                )
+                            )
+                        else:
+                            smoothed_pose_faces.append(face)
+                    faces = smoothed_pose_faces
+
+                if self.track_faces and self._tracker is not None:
+                    faces = self._tracker.update(faces)
+
+                res = DetectionResult(faces=faces, image=ts_frame.frame)
             except Exception:
                 # Safely ignore transient frame inference faults without crashing preview
                 res = DetectionResult(faces=[], image=ts_frame.frame)

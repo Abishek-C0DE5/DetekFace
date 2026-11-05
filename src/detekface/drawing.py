@@ -368,6 +368,44 @@ def _draw_hud(
         )
 
 
+def draw_pose_axes(
+    image: np.ndarray,
+    face: FaceDetection,
+    axis_length: float = 35.0,
+) -> None:
+    """Render 3D Cartesian orientation axis vectors projecting from the face nose tip.
+
+    Colors:
+        - Pitch axis (lateral tilt): Red (BGR (0, 0, 255))
+        - Yaw axis (vertical rotation): Green (BGR (0, 255, 0))
+        - Roll/depth axis: Blue (BGR (255, 0, 0))
+    """
+    if face.head_pose is None:
+        return
+    nose = None
+    if face.landmarks is not None and face.landmarks.nose_tip is not None:
+        nose = face.landmarks.nose_tip
+    elif face.dense_landmarks is not None and len(face.dense_landmarks) > 1:
+        nose = face.dense_landmarks[1]
+
+    if nose is None:
+        return
+
+    from detekface.pose import project_pose_axes
+
+    pts = project_pose_axes(image.shape[:2], face.head_pose, nose, axis_length=axis_length)
+    if pts is None:
+        return
+
+    origin, p_pitch, p_yaw, p_roll = pts
+    # Pitch axis (Red)
+    cv2.line(image, origin, p_pitch, (0, 0, 255), 2, cv2.LINE_AA)
+    # Yaw axis (Green)
+    cv2.line(image, origin, p_yaw, (0, 255, 0), 2, cv2.LINE_AA)
+    # Roll/Depth axis (Blue)
+    cv2.line(image, origin, p_roll, (255, 0, 0), 2, cv2.LINE_AA)
+
+
 def draw_face_overlay(
     image: np.ndarray,
     face: FaceDetection,
@@ -375,6 +413,8 @@ def draw_face_overlay(
     color: Union[str, Tuple[int, int, int]] = "#00FF88",
     thickness: int = 3,
     show_confidence: bool = False,
+    show_tracking_ids: bool = False,
+    show_pose: bool = False,
     copy: bool = True,
 ) -> np.ndarray:
     """Draw a face overlay on an image for a single face detection.
@@ -386,6 +426,8 @@ def draw_face_overlay(
         color: RGB hex string (e.g. '#00FF88') or documented color name. Default is '#00FF88'.
         thickness: Line stroke thickness in pixels (default 3).
         show_confidence: Whether to display the detection confidence score near the face (default False).
+        show_tracking_ids: Whether to display temporary face tracking ID (e.g. Face ID: 1).
+        show_pose: Whether to display estimated 3D head pose orientation angles and axes.
         copy: Whether to copy the image before drawing (default True, ensuring the original is untouched).
 
     Returns:
@@ -429,18 +471,31 @@ def draw_face_overlay(
             show_confidence=show_confidence,
         )
 
-    # Render confidence label for non-HUD shapes if requested
+    # Render tracking ID, confidence, and head-pose labels
+    badges = []
+    if show_tracking_ids and face.track_id is not None:
+        badges.append(f"Face ID: {face.track_id}")
     if show_confidence and valid_shape != "hud":
-        conf_text = format_confidence(face.confidence)
+        badges.append(format_confidence(face.confidence))
+    if show_pose and face.head_pose is not None:
+        hp = face.head_pose
+        badges.append(f"Y:{hp.yaw:+.0f}\u00b0 P:{hp.pitch:+.0f}\u00b0 R:{hp.roll:+.0f}\u00b0")
+
+    if badges:
+        badge_text = " | ".join(badges)
         label_y = max(18, y1 - 6)
         draw_text_badge(
             out,
-            conf_text,
+            badge_text,
             (x1, label_y),
             text_color=bgr_color,
             font_scale=0.42,
             padding=3,
         )
+
+    # Render 3D pose orientation axes from nose tip if show_pose=True
+    if show_pose and face.head_pose is not None:
+        draw_pose_axes(out, face)
 
     return out
 
@@ -452,6 +507,8 @@ def draw_faces(
     color: Union[str, Tuple[int, int, int]] = "#00FF88",
     thickness: int = 3,
     show_confidence: bool = False,
+    show_tracking_ids: bool = False,
+    show_pose: bool = False,
     copy: bool = True,
 ) -> np.ndarray:
     """Draw face overlays for multiple detected faces onto an image.
@@ -465,6 +522,8 @@ def draw_faces(
         color: RGB hex string (e.g. '#00FF88') or documented color name. Default is '#00FF88'.
         thickness: Line stroke thickness in pixels (default 3).
         show_confidence: Whether to render confidence percentages near each face (default False).
+        show_tracking_ids: Whether to render temporary tracking IDs near each face (default False).
+        show_pose: Whether to render head pose orientation badges and 3D axes (default False).
         copy: Whether to copy the image before drawing (default True).
 
     Returns:
@@ -482,6 +541,8 @@ def draw_faces(
             color=color,
             thickness=valid_thickness,
             show_confidence=show_confidence,
+            show_tracking_ids=show_tracking_ids,
+            show_pose=show_pose,
             copy=False,
         )
 
