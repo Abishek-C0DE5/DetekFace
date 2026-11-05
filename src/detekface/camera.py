@@ -1136,6 +1136,11 @@ def camera(
                 feedback_frames -= 1
 
             cv2.imshow(window_title, display_frame)
+            if frames_processed == 0:
+                try:
+                    cv2.setWindowProperty(window_title, cv2.WND_PROP_TOPMOST, 1)
+                except cv2.error:
+                    pass
 
             frames_processed += 1
             if max_frames is not None and frames_processed >= max_frames:
