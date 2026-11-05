@@ -266,7 +266,9 @@ class TestMultipleFacesMesh:
         assert np.count_nonzero(left_half) > 0
         assert np.count_nonzero(right_half) > 0
 
-    def test_captured_face_crops_are_not_modified(self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]):
+    def test_captured_face_crops_are_not_modified(
+        self, blank_image_bgr: np.ndarray, synthetic_478_landmarks: List[Point]
+    ):
         """Verify that calling result.annotate(show_mesh=True) never pollutes captured face crops."""
         # Create a face with a solid color in its bounding box so crop is non-empty
         img = blank_image_bgr.copy()
@@ -370,7 +372,9 @@ class TestMeshStyles:
     ):
         """Verify neon style renders highlighted accent points in addition to contour lines."""
         out_neon = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="neon", color="#00FF88", copy=True)
-        out_minimal = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style="minimal", color="#00FF88", copy=True)
+        out_minimal = draw_facial_mesh(
+            blank_image_bgr, synthetic_478_landmarks, style="minimal", color="#00FF88", copy=True
+        )
 
         # Neon emphasizes lines + anchor dots, modifying more pixels than minimal
         assert np.count_nonzero(out_neon) > np.count_nonzero(out_minimal)
@@ -396,12 +400,8 @@ class TestMeshStyles:
             assert np.count_nonzero(out_cyan[:, :, 1]) > 0
 
             # Thickness scaling
-            out_thick = draw_facial_mesh(
-                blank_image_bgr, synthetic_478_landmarks, style=style, thickness=3, copy=True
-            )
-            out_thin = draw_facial_mesh(
-                blank_image_bgr, synthetic_478_landmarks, style=style, thickness=1, copy=True
-            )
+            out_thick = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style=style, thickness=3, copy=True)
+            out_thin = draw_facial_mesh(blank_image_bgr, synthetic_478_landmarks, style=style, thickness=1, copy=True)
             if style != "points":
                 assert np.count_nonzero(out_thick) > np.count_nonzero(out_thin)
 
@@ -468,5 +468,3 @@ class TestMeshStyles:
                 # Both red (shape overlay) and green (mesh) channels should have pixels
                 assert np.count_nonzero(annotated[:, :, 2]) > 0  # Red
                 assert np.count_nonzero(annotated[:, :, 1]) > 0  # Green
-
-

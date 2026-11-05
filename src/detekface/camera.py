@@ -90,7 +90,11 @@ class CameraSession:
             )
         self.async_mode = bool(async_mode)
 
-        if not isinstance(stale_timeout_sec, (int, float)) or isinstance(stale_timeout_sec, bool) or stale_timeout_sec <= 0:
+        if (
+            not isinstance(stale_timeout_sec, (int, float))
+            or isinstance(stale_timeout_sec, bool)
+            or stale_timeout_sec <= 0
+        ):
             raise ConfigurationError(
                 message=f"stale_timeout_sec must be a positive number, got {stale_timeout_sec}.",
                 hint="Set stale_timeout_sec to a duration in seconds like 0.5.",
@@ -974,9 +978,7 @@ def camera(
 
                 show_mesh = True
                 curr_idx = (
-                    SUPPORTED_MESH_STYLES.index(valid_mesh_style)
-                    if valid_mesh_style in SUPPORTED_MESH_STYLES
-                    else 0
+                    SUPPORTED_MESH_STYLES.index(valid_mesh_style) if valid_mesh_style in SUPPORTED_MESH_STYLES else 0
                 )
                 valid_mesh_style = SUPPORTED_MESH_STYLES[(curr_idx + 1) % len(SUPPORTED_MESH_STYLES)]
                 feedback_text = f"Mesh: {valid_mesh_style}"

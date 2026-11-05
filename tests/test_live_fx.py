@@ -102,9 +102,7 @@ class TestLiveFXStyles:
 class TestAnimationTimingAndMotion:
     """Tests for timestamp-driven animation and frame rate independence."""
 
-    def test_scanning_beam_moves_across_timestamps(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_scanning_beam_moves_across_timestamps(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify scanning beam shifts vertical position across different timestamps."""
         renderer = LiveFXRenderer(style="scan", color="#00FF88", scan_speed=1.0)
 
@@ -115,9 +113,7 @@ class TestAnimationTimingAndMotion:
         # Images at different timestamps must differ due to beam motion
         assert not np.array_equal(f1, f2)
 
-    def test_frame_rate_independence(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_frame_rate_independence(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify animation progress matches clock time regardless of simulation FPS."""
         # 15 FPS simulation (steps of 1/15s)
         r15 = LiveFXRenderer(style="scan", scan_speed=1.0)
@@ -137,9 +133,7 @@ class TestAnimationTimingAndMotion:
 class TestTrackingAndMultiFace:
     """Tests for multi-face tracking, occlusion handling, and labels."""
 
-    def test_multiple_faces_rendered_independently(
-        self, blank_image: np.ndarray, synthetic_478_landmarks: List[Point]
-    ):
+    def test_multiple_faces_rendered_independently(self, blank_image: np.ndarray, synthetic_478_landmarks: List[Point]):
         """Verify multiple faces are tracked with independent IDs and telemetry."""
         face1 = FaceDetection(
             bbox=BoundingBox(x=30, y=100, width=120, height=120),
@@ -160,9 +154,7 @@ class TestTrackingAndMultiFace:
         assert np.count_nonzero(out[:, 200:]) > 0
         assert len(renderer._tracks) == 2
 
-    def test_grace_period_handles_temporary_face_loss(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_grace_period_handles_temporary_face_loss(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify brief loss of detection does not abruptly erase track."""
         renderer = LiveFXRenderer(style="scan", grace_period_sec=0.3)
 
@@ -185,9 +177,7 @@ class TestTrackingAndMultiFace:
         renderer.render(blank_image, faces=[], timestamp=1.0, copy=True)
         assert len(renderer._tracks) == 0
 
-    def test_lock_transition_and_telemetry_labels(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_lock_transition_and_telemetry_labels(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify transition from acquisition to locked status and face-shape label presence."""
         renderer = LiveFXRenderer(style="scan", show_labels=True)
 
@@ -204,9 +194,7 @@ class TestTrackingAndMultiFace:
 class TestPerformanceAndOverhead:
     """Benchmark tests ensuring Live FX renderer introduces negligible overhead."""
 
-    def test_render_latency_overhead(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_render_latency_overhead(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify rendering 100 frames takes well under 5ms per frame (200+ FPS capability)."""
         renderer = LiveFXRenderer(style="scan")
         # Warmup
@@ -231,9 +219,7 @@ class TestPerformanceAndOverhead:
 class TestDetectionResultIntegration:
     """Integration test with DetectionResult.annotate()."""
 
-    def test_result_annotate_live_fx(
-        self, blank_image: np.ndarray, sample_detection: FaceDetection
-    ):
+    def test_result_annotate_live_fx(self, blank_image: np.ndarray, sample_detection: FaceDetection):
         """Verify DetectionResult.annotate(live_fx=True) renders Live FX scanner layer."""
         result = DetectionResult(faces=[sample_detection], image=blank_image.copy())
 
@@ -248,4 +234,3 @@ class TestDetectionResultIntegration:
         assert not np.array_equal(out, blank_image)
         # Original image in result must remain untouched
         assert np.count_nonzero(result.image) == 0
-

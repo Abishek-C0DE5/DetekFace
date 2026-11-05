@@ -378,9 +378,9 @@ import detekface
 # 1. Live Webcam with Neon Facial Mesh & Scanning Laser Beam
 detekface.camera(
     show_mesh=True,
-    mesh_style="neon",       # 'wireframe', 'neon', 'minimal', 'contour', 'points'
-    mesh_color="#00FF88",    # Hex code, RGB tuple, or color name
-    show_scan=True,          # Animated computer-vision laser scanning line
+    mesh_style="neon",  # 'wireframe', 'neon', 'minimal', 'contour', 'points'
+    mesh_color="#00FF88",  # Hex code, RGB tuple, or color name
+    show_scan=True,  # Animated computer-vision laser scanning line
     show_fps=True,
 )
 
@@ -514,17 +514,16 @@ Analyze a supplied photo without opening a webcam:
 ```python
 import detekface
 
-result = detekface.detect(
-    "portrait.jpg",
-    analyze_face_shape=True
-)
+result = detekface.detect("portrait.jpg", analyze_face_shape=True)
 
 for face in result.faces:
-    print(f"Shape       : {face.face_shape.label}")        # 'oval', 'round', 'square', 'heart', 'diamond', 'oblong', 'undetermined'
-    print(f"Fit Score   : {face.face_shape.fit_score:.2f}")    # Heuristic fit score (0.0 to 1.0)
-    print(f"Alternatives: {face.face_shape.alternatives}") # Candidates ranked by fit score
-    print(f"Measurements: {face.face_shape.measurements}") # Proportions, ratios, and jaw angle
-    print(f"Warnings    : {face.face_shape.warnings}")     # Reasons if quality is degraded
+    print(
+        f"Shape       : {face.face_shape.label}"
+    )  # 'oval', 'round', 'square', 'heart', 'diamond', 'oblong', 'undetermined'
+    print(f"Fit Score   : {face.face_shape.fit_score:.2f}")  # Heuristic fit score (0.0 to 1.0)
+    print(f"Alternatives: {face.face_shape.alternatives}")  # Candidates ranked by fit score
+    print(f"Measurements: {face.face_shape.measurements}")  # Proportions, ratios, and jaw angle
+    print(f"Warnings    : {face.face_shape.warnings}")  # Reasons if quality is degraded
 
 # Save annotated photo with contour silhouette and shape badges
 result.save("portrait_analyzed.jpg", show_face_shape=True, show_shape_measurements=True)

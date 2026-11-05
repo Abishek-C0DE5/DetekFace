@@ -114,6 +114,7 @@ def test_async_engine_bounded_queue_no_overflow() -> None:
     mock_cap = MockVideoCap(delay_sec=0.001)
 
     mock_detector = MagicMock()
+
     # Simulate slow detector (30ms per frame)
     def slow_detect(img, **kwargs):
         time.sleep(0.03)
@@ -179,6 +180,7 @@ def test_delayed_inference_rendering_continues() -> None:
     mock_cap = MockVideoCap(delay_sec=0.002)
 
     mock_detector = MagicMock()
+
     # Detector stalls for 100ms
     def stalled_detect(img, **kwargs):
         time.sleep(0.1)
@@ -434,4 +436,3 @@ def test_long_running_session_stability() -> None:
         assert metrics.actual_width > 0
     finally:
         engine.stop()
-

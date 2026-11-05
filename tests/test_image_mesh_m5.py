@@ -214,7 +214,7 @@ def test_original_image_immutability():
 
 def test_different_image_dimensions():
     """Verify mesh renders correctly on non-square, small, and high-resolution images."""
-    for (h, w) in [(120, 320), (720, 1280), (300, 300)]:
+    for h, w in [(120, 320), (720, 1280), (300, 300)]:
         img = _make_dummy_image(h=h, w=w)
         face = _make_face_with_landmarks(x=20, y=20, w=60, h=60)
         result = DetectionResult(faces=[face], image=img)
@@ -227,4 +227,3 @@ def test_invalid_image_raises_error():
     empty_result = DetectionResult(faces=[], image=np.empty((0, 0, 3), dtype=np.uint8))
     with pytest.raises(InvalidImageError):
         empty_result.render(show_mesh=True)
-

@@ -422,9 +422,7 @@ def _handle_camera(args: argparse.Namespace) -> int:
             max_frames=args.max_frames,
             backend=args.backend,
             analyze_face_shape=(
-                getattr(args, "face_shape", False)
-                or getattr(args, "mesh", False)
-                or getattr(args, "live_fx", False)
+                getattr(args, "face_shape", False) or getattr(args, "mesh", False) or getattr(args, "live_fx", False)
             ),
             show_mesh=getattr(args, "mesh", False),
             mesh_style=getattr(args, "mesh_style", "wireframe"),

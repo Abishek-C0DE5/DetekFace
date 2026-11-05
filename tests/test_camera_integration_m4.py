@@ -297,4 +297,3 @@ def test_rendering_order_in_camera_session():
             assert isinstance(annotated, np.ndarray)
             assert annotated.shape == test_frame.shape
             assert not np.array_equal(annotated, test_frame)
-

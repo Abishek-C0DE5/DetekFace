@@ -26,7 +26,11 @@ def main() -> None:
             return
     else:
         # Create a synthetic dual-face canvas for reproducible demonstration
-        base = cv2.imread(str(MULTI_FACE_SAMPLE)) if MULTI_FACE_SAMPLE.exists() else np.zeros((480, 800, 3), dtype=np.uint8)
+        base = (
+            cv2.imread(str(MULTI_FACE_SAMPLE))
+            if MULTI_FACE_SAMPLE.exists()
+            else np.zeros((480, 800, 3), dtype=np.uint8)
+        )
         h, w = base.shape[:2]
         canvas = np.zeros((h, w * 2, 3), dtype=np.uint8)
         canvas[:, :w] = base

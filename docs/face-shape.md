@@ -29,10 +29,7 @@ Use `analyze_face_shape=True` with `detekface.detect()`:
 ```python
 import detekface
 
-result = detekface.detect(
-    "portrait.jpg",
-    analyze_face_shape=True
-)
+result = detekface.detect("portrait.jpg", analyze_face_shape=True)
 
 for face in result.faces:
     print(f"Shape Label : {face.face_shape.label}")

@@ -160,10 +160,10 @@ Custom styling can be specified via RGB hex strings (`"#00FF88"`), named color s
 annotated = result.render(
     show_mesh=True,
     mesh_style="wireframe",
-    mesh_color="#00FFFF",           # Cyan mesh
-    mesh_thickness=1,               # Fine lines
-    mesh_regions=["contours", "lips"], # Only render facial contour and lips
-    mesh_draw_points=True,          # Draw vertex points
+    mesh_color="#00FFFF",  # Cyan mesh
+    mesh_thickness=1,  # Fine lines
+    mesh_regions=["contours", "lips"],  # Only render facial contour and lips
+    mesh_draw_points=True,  # Draw vertex points
 )
 ```
 
