@@ -156,6 +156,15 @@ from detekface.quality import (
     assess_face_quality,
     check_face_quality,
 )
+from detekface.anonymize import (
+    PRIVACY_DISCLAIMER,
+    SUPPORTED_ANONYMIZE_METHODS,
+    AnonymizationResult,
+    anonymize,
+    anonymize_frame,
+    anonymize_roi,
+    normalize_anonymize_method,
+)
 
 __version__: str = "0.3.0"
 
@@ -462,4 +471,11 @@ __all__: List[str] = [
     "QUALITY_DISCLAIMER",
     "assess_face_quality",
     "check_face_quality",
+    "AnonymizationResult",
+    "PRIVACY_DISCLAIMER",
+    "SUPPORTED_ANONYMIZE_METHODS",
+    "anonymize",
+    "anonymize_frame",
+    "anonymize_roi",
+    "normalize_anonymize_method",
 ]

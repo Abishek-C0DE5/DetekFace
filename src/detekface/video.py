@@ -59,6 +59,10 @@ def video(
     accessory_opacity: float = 1.0,
     accessory_scale: float = 1.0,
     accessory_y_offset: float = 0.0,
+    anonymize: Optional[str] = None,
+    anonymize_strength: float = 0.5,
+    anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+    anonymize_mask_shape: str = "box",
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -337,6 +341,21 @@ def video(
 
             # Draw overlays on display/output frame
             display_frame = frame
+
+            # Apply privacy anonymization if requested
+            if anonymize is not None:
+                from detekface.anonymize import anonymize_frame
+
+                anonymize_frame(
+                    image=display_frame,
+                    faces=result.faces,
+                    method=anonymize,
+                    strength=anonymize_strength,
+                    color=anonymize_color,
+                    mask_shape=anonymize_mask_shape,
+                    copy=False,
+                )
+
             draw_faces(
                 display_frame,
                 result.faces,

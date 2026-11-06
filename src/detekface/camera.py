@@ -84,6 +84,10 @@ class CameraSession:
         accessory_scale: Optional[float] = None,
         accessory_y_offset: Optional[float] = None,
         show_quality: bool = False,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -96,6 +100,10 @@ class CameraSession:
         self.on_gesture = on_gesture
         self.show_gestures = bool(show_gestures)
         self.show_quality = bool(show_quality)
+        self.anonymize = anonymize
+        self.anonymize_strength = float(anonymize_strength)
+        self.anonymize_color = anonymize_color
+        self.anonymize_mask_shape = str(anonymize_mask_shape)
 
         eff = effect if effect is not None else accessory
         self.effect: Optional[str] = eff
@@ -616,6 +624,10 @@ class CameraSession:
         accessory_scale: Optional[float] = None,
         accessory_y_offset: Optional[float] = None,
         show_quality: bool = False,
+        anonymize: Optional[str] = None,
+        anonymize_strength: Optional[float] = None,
+        anonymize_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+        anonymize_mask_shape: Optional[str] = None,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -643,6 +655,24 @@ class CameraSession:
         effective_live_fx = live_fx or (show_scan is True)
 
         display_frame = self._latest_frame.copy()
+
+        # Layer 0: Face Privacy Anonymization
+        eff_anon = anonymize if anonymize is not None else self.anonymize
+        if eff_anon is not None:
+            from detekface.anonymize import anonymize_frame
+
+            st = anonymize_strength if anonymize_strength is not None else self.anonymize_strength
+            co = anonymize_color if anonymize_color is not None else self.anonymize_color
+            sh = anonymize_mask_shape if anonymize_mask_shape is not None else self.anonymize_mask_shape
+            anonymize_frame(
+                display_frame,
+                self._latest_result.faces,
+                method=eff_anon,
+                strength=st,
+                color=co,
+                mask_shape=sh,
+                copy=False,
+            )
 
         # Layer 1: Dense facial mesh wireframe
         if show_mesh:
@@ -921,6 +951,10 @@ def camera(
     accessory_scale: float = 1.0,
     accessory_y_offset: float = 0.0,
     show_quality: bool = False,
+    anonymize: Optional[str] = None,
+    anonymize_strength: float = 0.5,
+    anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+    anonymize_mask_shape: str = "box",
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -1137,6 +1171,11 @@ def camera(
         session_kwargs["accessory_y_offset"] = accessory_y_offset
     if show_quality:
         session_kwargs["show_quality"] = True
+    if anonymize is not None:
+        session_kwargs["anonymize"] = anonymize
+        session_kwargs["anonymize_strength"] = anonymize_strength
+        session_kwargs["anonymize_color"] = anonymize_color
+        session_kwargs["anonymize_mask_shape"] = anonymize_mask_shape
 
     session = CameraSession(
         camera_index=camera_index,
@@ -1169,6 +1208,20 @@ def camera(
             result = session.read()
             assert session.latest_frame is not None
             display_frame = session.latest_frame.copy()
+
+            # Layer 0: Face Privacy Anonymization
+            if anonymize is not None:
+                from detekface.anonymize import anonymize_frame
+
+                anonymize_frame(
+                    display_frame,
+                    result.faces,
+                    method=anonymize,
+                    strength=anonymize_strength,
+                    color=anonymize_color,
+                    mask_shape=anonymize_mask_shape,
+                    copy=False,
+                )
 
             # Layer 1: Dense facial mesh wireframe (base anatomical layer)
             if show_mesh:

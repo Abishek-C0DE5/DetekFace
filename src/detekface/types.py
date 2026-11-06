@@ -977,6 +977,52 @@ class DetectionResult:
             border_margin=border_margin,
         )
 
+    def anonymize(
+        self,
+        method: str = "blur",
+        strength: float = 0.5,
+        kernel_size: Optional[int] = None,
+        pixel_size: Optional[int] = None,
+        color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        mask_shape: str = "box",
+        padding: float = 0.0,
+        fail_closed: bool = False,
+        output_path: Optional[Union[str, Path]] = None,
+        overwrite: bool = False,
+    ):
+        """Anonymize detected faces in this result using blur, pixelation, or solid masking.
+
+        Args:
+            method: 'blur', 'pixelate', or 'solid' (default 'blur').
+            strength: Intensity in [0.0, 1.0] (default 0.5).
+            kernel_size: Optional explicit odd blur kernel size.
+            pixel_size: Optional explicit pixelation mosaic block size.
+            color: Solid mask color (default black).
+            mask_shape: 'box' or 'ellipse'.
+            padding: Additional fractional margin around bounding boxes.
+            fail_closed: If True and 0 faces were detected, anonymizes the entire frame.
+            output_path: Optional file path to save the anonymized image.
+            overwrite: Whether to overwrite existing destination files.
+
+        Returns:
+            AnonymizationResult: Anonymized image array and operation metadata.
+        """
+        from detekface.anonymize import anonymize
+
+        return anonymize(
+            image=self,
+            method=method,
+            strength=strength,
+            kernel_size=kernel_size,
+            pixel_size=pixel_size,
+            color=color,
+            mask_shape=mask_shape,
+            padding=padding,
+            fail_closed=fail_closed,
+            output_path=output_path,
+            overwrite=overwrite,
+        )
+
     def __repr__(self) -> str:
         img_h, img_w = self.image.shape[:2] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else (0, 0)
         return f"<DetectionResult: {len(self.faces)} face(s) found in {img_w}x{img_h} image>"
