@@ -184,6 +184,7 @@ def detect(
     mesh: bool = False,
     estimate_pose: bool = False,
     detect_gestures: bool = False,
+    track_faces: bool = False,
 ) -> DetectionResult:
     """Detect faces in a still image.
 
@@ -236,20 +237,19 @@ def detect(
             )
         _detector_cache[cache_key] = detector
 
+    detect_kwargs = {
+        "analyze_face_shape": analyze_face_shape,
+        "mesh": mesh,
+        "estimate_pose": estimate_pose,
+    }
     if detect_gestures:
-        return detector.detect(
-            image,
-            analyze_face_shape=analyze_face_shape,
-            mesh=mesh,
-            estimate_pose=estimate_pose,
-            detect_gestures=True,
-        )
+        detect_kwargs["detect_gestures"] = detect_gestures
+    if track_faces:
+        detect_kwargs["track_faces"] = track_faces
 
     return detector.detect(
         image,
-        analyze_face_shape=analyze_face_shape,
-        mesh=mesh,
-        estimate_pose=estimate_pose,
+        **detect_kwargs,
     )
 
 

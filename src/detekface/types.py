@@ -426,6 +426,10 @@ class DetectionResult:
         accessory_opacity: float = 1.0,
         accessory_scale: float = 1.0,
         accessory_y_offset: float = 0.0,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> np.ndarray:
         """Render face overlay annotations on a copy of the original image.
 
@@ -461,8 +465,22 @@ class DetectionResult:
 
         effective_contour = show_shape_contour if show_contour is None else bool(show_contour)
 
-        # Layer 1: Dense facial mesh wireframe (drawn first as base layer)
+        # Layer 0: Face privacy anonymization (blur, pixelate, solid)
         annotated = self.image.copy()
+        if anonymize is not None:
+            from detekface.anonymize import anonymize_frame
+
+            annotated = anonymize_frame(
+                annotated,
+                self.faces,
+                method=anonymize,
+                strength=anonymize_strength,
+                color=anonymize_color,
+                mask_shape=anonymize_mask_shape,
+                copy=False,
+            )
+
+        # Layer 1: Dense facial mesh wireframe (drawn first as base layer)
         if show_mesh:
             from detekface.mesh import draw_face_meshes
 
@@ -560,6 +578,10 @@ class DetectionResult:
         accessory_opacity: float = 1.0,
         accessory_scale: float = 1.0,
         accessory_y_offset: float = 0.0,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -585,6 +607,10 @@ class DetectionResult:
             accessory_opacity=accessory_opacity,
             accessory_scale=accessory_scale,
             accessory_y_offset=accessory_y_offset,
+            anonymize=anonymize,
+            anonymize_strength=anonymize_strength,
+            anonymize_color=anonymize_color,
+            anonymize_mask_shape=anonymize_mask_shape,
         )
 
     def render(
@@ -611,6 +637,10 @@ class DetectionResult:
         accessory_opacity: float = 1.0,
         accessory_scale: float = 1.0,
         accessory_y_offset: float = 0.0,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> np.ndarray:
         """Alias for `annotate()` to obtain the rendered image array."""
         return self.annotate(
@@ -636,6 +666,10 @@ class DetectionResult:
             accessory_opacity=accessory_opacity,
             accessory_scale=accessory_scale,
             accessory_y_offset=accessory_y_offset,
+            anonymize=anonymize,
+            anonymize_strength=anonymize_strength,
+            anonymize_color=anonymize_color,
+            anonymize_mask_shape=anonymize_mask_shape,
         )
 
     @property
@@ -669,6 +703,10 @@ class DetectionResult:
         accessory_opacity: float = 1.0,
         accessory_scale: float = 1.0,
         accessory_y_offset: float = 0.0,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> int:
         """Display the annotated image in an OpenCV GUI window until closed or dismissed.
 
@@ -716,6 +754,10 @@ class DetectionResult:
             accessory_opacity=accessory_opacity,
             accessory_scale=accessory_scale,
             accessory_y_offset=accessory_y_offset,
+            anonymize=anonymize,
+            anonymize_strength=anonymize_strength,
+            anonymize_color=anonymize_color,
+            anonymize_mask_shape=anonymize_mask_shape,
         )
 
         try:
@@ -774,6 +816,10 @@ class DetectionResult:
         accessory_opacity: float = 1.0,
         accessory_scale: float = 1.0,
         accessory_y_offset: float = 0.0,
+        anonymize: Optional[str] = None,
+        anonymize_strength: float = 0.5,
+        anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+        anonymize_mask_shape: str = "box",
     ) -> Path:
         """Save the annotated image with overlays to the requested disk path.
 
@@ -825,6 +871,10 @@ class DetectionResult:
             accessory_opacity=accessory_opacity,
             accessory_scale=accessory_scale,
             accessory_y_offset=accessory_y_offset,
+            anonymize=anonymize,
+            anonymize_strength=anonymize_strength,
+            anonymize_color=anonymize_color,
+            anonymize_mask_shape=anonymize_mask_shape,
         )
 
         try:

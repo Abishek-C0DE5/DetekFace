@@ -1,6 +1,6 @@
 import math
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Sequence, Tuple, Union
 import cv2
 
 from detekface.capture import capture
@@ -63,6 +63,18 @@ def video(
     anonymize_strength: float = 0.5,
     anonymize_color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
     anonymize_mask_shape: str = "box",
+    detect_gestures: bool = False,
+    on_gesture: Optional[Callable] = None,
+    show_gestures: bool = False,
+    show_quality: bool = False,
+    show_mesh: bool = False,
+    mesh_style: str = "wireframe",
+    mesh_color: Optional[Union[str, Tuple[int, int, int]]] = None,
+    mesh_thickness: Optional[int] = None,
+    mesh_regions: Optional[Sequence[str]] = None,
+    mesh_draw_points: Optional[bool] = None,
+    live_fx: bool = False,
+    live_fx_style: str = "scan",
 ) -> Optional[Path]:
     """Process a prerecorded video file frame by frame and detect faces.
 
@@ -161,6 +173,13 @@ def video(
             hint="Set frame_skip=0 for full processing, or frame_skip=1/2 to process every 2nd/3rd frame.",
         )
 
+    if codec is not None:
+        if not isinstance(codec, str) or len(codec) != 4:
+            raise ConfigurationError(
+                message=f"Codec must be a 4-character FourCC string, got: {codec!r}.",
+                hint="Use codecs like 'mp4v', 'MJPG', or 'XVID'.",
+            )
+
     # Validate output destination if requested
     target_output: Optional[Path] = None
     fourcc_code: str = "mp4v"
@@ -200,11 +219,6 @@ def video(
             )
 
         if codec is not None:
-            if not isinstance(codec, str) or len(codec) != 4:
-                raise ConfigurationError(
-                    message=f"Codec must be a 4-character FourCC string, got: {codec!r}.",
-                    hint="Use codecs like 'mp4v', 'MJPG', or 'XVID'.",
-                )
             fourcc_code = codec
         else:
             if out_ext == ".avi":
@@ -254,6 +268,28 @@ def video(
         estimate_pose = True
     else:
         accessory_renderer = None
+
+    if on_gesture is not None or show_gestures:
+        detect_gestures = True
+
+    if detect_gestures:
+        from detekface.gestures import GestureDetector
+
+        gesture_detector = GestureDetector()
+        if tracker is None:
+            tracker = FaceTracker()
+        if pose_smoother is None:
+            pose_smoother = TemporalPoseSmoother()
+        estimate_pose = True
+    else:
+        gesture_detector = None
+
+    if live_fx:
+        from detekface.live_fx import LiveFXRenderer
+
+        fx_renderer = LiveFXRenderer(style=live_fx_style, color=bgr_color)
+    else:
+        fx_renderer = None
 
     feedback_text: str = ""
     feedback_frames: int = 0
@@ -313,7 +349,12 @@ def video(
             # Perform face detection (reusing detections on skipped frames)
             should_detect = (frame_skip == 0) or (frames_processed % (frame_skip + 1) == 0) or (latest_result is None)
             if should_detect:
-                latest_result = detector.detect(clean_frame, estimate_pose=(estimate_pose or show_pose))
+                latest_result = detector.detect(
+                    clean_frame,
+                    estimate_pose=(estimate_pose or show_pose or detect_gestures),
+                    mesh=(show_mesh or live_fx or detect_gestures),
+                    detect_gestures=detect_gestures,
+                )
             assert latest_result is not None
             v_faces = latest_result.faces
             if pose_smoother is not None:
@@ -337,12 +378,37 @@ def video(
                 v_faces = smoothed_pose_faces
             if tracker is not None:
                 v_faces = tracker.update(v_faces)
+
+            if detect_gestures and gesture_detector is not None:
+                from dataclasses import replace
+
+                active_events = gesture_detector.process(v_faces, clean_frame.shape[:2])
+                if active_events:
+                    events_by_key = {}
+                    for ev in active_events:
+                        if on_gesture is not None:
+                            try:
+                                on_gesture(ev)
+                            except Exception:
+                                pass
+                        k = ev.track_id if ev.track_id is not None else ev.face_index
+                        events_by_key.setdefault(k, []).append(ev.name)
+                    faces_with_g = []
+                    for idx, face in enumerate(v_faces):
+                        k = face.track_id if face.track_id is not None else idx
+                        g_list = events_by_key.get(k)
+                        if g_list:
+                            faces_with_g.append(replace(face, gestures=g_list))
+                        else:
+                            faces_with_g.append(face)
+                    v_faces = faces_with_g
+
             result = DetectionResult(faces=v_faces, image=clean_frame)
 
             # Draw overlays on display/output frame
             display_frame = frame
 
-            # Apply privacy anonymization if requested
+            # Layer 0: Privacy anonymization if requested
             if anonymize is not None:
                 from detekface.anonymize import anonymize_frame
 
@@ -356,6 +422,27 @@ def video(
                     copy=False,
                 )
 
+            # Layer 1: Dense facial mesh wireframe
+            if show_mesh:
+                from detekface.mesh import draw_face_meshes
+
+                m_col = parse_color_to_bgr(mesh_color) if mesh_color is not None else bgr_color
+                draw_face_meshes(
+                    display_frame,
+                    result.faces,
+                    style=mesh_style,
+                    color=m_col,
+                    thickness=mesh_thickness,
+                    draw_points=mesh_draw_points,
+                    regions=mesh_regions,
+                    copy=False,
+                )
+
+            # Layer 2: Live FX modern scanner
+            if live_fx and fx_renderer is not None:
+                fx_renderer.render(display_frame, faces=result.faces, copy=False)
+
+            # Layer 3: Face overlay shapes and gesture tags
             draw_faces(
                 display_frame,
                 result.faces,
@@ -365,16 +452,29 @@ def video(
                 show_confidence=show_confidence,
                 show_tracking_ids=show_tracking_ids,
                 show_pose=show_pose,
+                show_gestures=show_gestures or detect_gestures,
                 copy=False,
             )
 
-            # Render AR face accessory if enabled
+            # Layer 4: AR face accessory if enabled
             if accessory_renderer is not None:
                 display_frame = accessory_renderer.render(
                     display_frame,
                     result.faces,
                     copy=False,
                 )
+
+            # Layer 5: Technical quality HUD badge if enabled
+            if show_quality:
+                from detekface.quality import assess_face_quality
+
+                for idx, face in enumerate(result.faces):
+                    qm = assess_face_quality(display_frame, face, face_index=idx)
+                    bx1, by2 = int(face.bbox.x1), int(face.bbox.y2)
+                    badge_text = f"Q:{int(qm.quality_score * 100)}% | Sharp:{int(qm.sharpness)} | {qm.brightness_status.upper()}"
+                    b_col = (0, 0, 255) if qm.is_blurry else ((0, 165, 255) if qm.brightness_status != "optimal" else (0, 255, 128))
+                    cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 3, cv2.LINE_AA)
+                    cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, b_col, 1, cv2.LINE_AA)
 
             # Render status metrics if requested
             if show_fps or show_count:

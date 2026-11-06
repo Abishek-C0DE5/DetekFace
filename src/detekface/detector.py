@@ -325,6 +325,7 @@ class FaceDetector:
         mesh: bool = False,
         estimate_pose: bool = False,
         detect_gestures: bool = False,
+        track_faces: bool = False,
     ) -> DetectionResult:
         """Perform face detection on a single image.
 
@@ -419,6 +420,11 @@ class FaceDetector:
                     replace(face, gestures=events_by_idx[i]) if i in events_by_idx else face
                     for i, face in enumerate(faces)
                 ]
+
+        if track_faces:
+            from detekface.tracking import FaceTracker
+
+            faces = FaceTracker().update(faces)
 
         return DetectionResult(faces=faces, image=bgr_image)
 
