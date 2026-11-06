@@ -314,6 +314,11 @@ class FaceDetector:
         return self._nms_threshold
 
     @property
+    def top_k(self) -> int:
+        """Maximum candidate faces to retain prior to NMS."""
+        return self._top_k
+
+    @property
     def input_size(self) -> Optional[Tuple[int, int]]:
         """Configured inference resolution (width, height), or None for native resolution."""
         return self._input_size

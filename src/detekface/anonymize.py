@@ -183,10 +183,11 @@ def apply_blur_roi(
         if k % 2 == 0:
             k += 1
     else:
-        # Dynamic kernel size proportional to face ROI dimensions and strength
+        # Dynamic kernel size proportional to face ROI dimensions and strength,
+        # capped at 45 for real-time 60 FPS performance without loss of anonymity.
         dim = max(h, w)
-        # strength in [0.0, 1.0] maps to [3, dim]
-        k = int(round(3 + (dim - 3) * np.clip(strength, 0.05, 1.0)))
+        max_k = min(dim, 45)
+        k = int(round(3 + (max_k - 3) * np.clip(strength, 0.05, 1.0)))
         if k % 2 == 0:
             k += 1
         k = max(3, k)

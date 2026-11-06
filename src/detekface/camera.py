@@ -66,6 +66,7 @@ class CameraSession:
         resolution: Optional[Tuple[int, int]] = None,
         input_size: Optional[Tuple[int, int]] = None,
         analyze_face_shape: bool = False,
+        mesh: bool = False,
         track_faces: bool = False,
         estimate_pose: bool = False,
         target_fps: float = 60.0,
@@ -96,8 +97,11 @@ class CameraSession:
         self.window_title = window_title or "detekface - Camera Session"
         self._window_opened = False
         self.analyze_face_shape = bool(analyze_face_shape)
+        self.mesh = bool(mesh)
         self.detect_gestures = bool(detect_gestures or on_gesture is not None)
         self.on_gesture = on_gesture
+        self.gestures = gestures
+        self.gesture_config = gesture_config
         self.show_gestures = bool(show_gestures)
         self.show_quality = bool(show_quality)
         self.anonymize = anonymize
@@ -282,8 +286,11 @@ class CameraSession:
         """Return the total number of frames successfully read in this session."""
         return self._frames_read
 
-    def open(self) -> "CameraSession":
+    def open(self, cap: Optional[cv2.VideoCapture] = None) -> "CameraSession":
         """Open the camera capture hardware device.
+
+        Args:
+            cap: Optional pre-existing cv2.VideoCapture instance (for hardware testing or injection).
 
         Raises:
             CameraNotFoundError: If the camera cannot be opened or is not detected.
@@ -291,17 +298,21 @@ class CameraSession:
         if self._cap is not None and self._cap.isOpened():
             return self
 
-        cap = cv2.VideoCapture(self.camera_index)
-        if not cap.isOpened():
-            cap.release()
-            self._cap = None
-            raise CameraNotFoundError(
-                message=f"Could not open camera device with index {self.camera_index}.",
-                hint=(
-                    "Verify your webcam is connected, that camera access permissions are enabled "
-                    "in your operating system settings, and that no other application is currently using it."
-                ),
-            )
+        if cap is not None:
+            self._cap = cap
+        else:
+            cap = cv2.VideoCapture(self.camera_index)
+            if not cap.isOpened():
+                cap.release()
+                self._cap = None
+                raise CameraNotFoundError(
+                    message=f"Could not open camera device with index {self.camera_index}.",
+                    hint=(
+                        "Verify your webcam is connected, that camera access permissions are enabled "
+                        "in your operating system settings, and that no other application is currently using it."
+                    ),
+                )
+            self._cap = cap
 
         if self.resolution is not None:
             w, h = self.resolution
@@ -324,8 +335,13 @@ class CameraSession:
                 target_fps=self.target_fps,
                 resolution=self.resolution,
                 analyze_face_shape=self.analyze_face_shape,
+                mesh=self.mesh,
                 track_faces=self.track_faces,
                 estimate_pose=self.estimate_pose,
+                detect_gestures=self.detect_gestures,
+                on_gesture=self.on_gesture,
+                gestures=self.gestures,
+                gesture_config=self.gesture_config,
                 stale_timeout_sec=self.stale_timeout_sec,
             )
             self._async_engine.start(cap=self._cap)
@@ -1154,6 +1170,8 @@ def camera(
     session_kwargs = {}
     if analyze_face_shape:
         session_kwargs["analyze_face_shape"] = True
+    if show_mesh:
+        session_kwargs["mesh"] = True
     if track_faces:
         session_kwargs["track_faces"] = True
     if estimate_pose:

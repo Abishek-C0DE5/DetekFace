@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from queue import Empty, Queue
 import threading
 import time
-from typing import Optional, Sequence, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 import cv2
 import numpy as np
 
@@ -69,6 +69,10 @@ class AsyncCameraEngine:
         mesh: bool = False,
         track_faces: bool = False,
         estimate_pose: bool = False,
+        detect_gestures: bool = False,
+        on_gesture: Optional[Callable] = None,
+        gestures: Optional[Sequence[str]] = None,
+        gesture_config: Optional[object] = None,
         stale_timeout_sec: float = 0.5,
         queue_maxsize: int = 1,
     ) -> None:
@@ -78,11 +82,23 @@ class AsyncCameraEngine:
         self.stale_timeout_sec = max(0.05, float(stale_timeout_sec))
         self.analyze_face_shape = bool(analyze_face_shape)
         self.mesh = bool(mesh)
-        self.track_faces = bool(track_faces)
-        self.estimate_pose = bool(estimate_pose)
+        self.detect_gestures = bool(detect_gestures or on_gesture is not None)
+        self.on_gesture = on_gesture
+        self.track_faces = bool(track_faces or self.detect_gestures)
+        self.estimate_pose = bool(estimate_pose or self.detect_gestures)
         self._shape_tracker = TemporalShapeTracker() if self.analyze_face_shape else None
         self._tracker = FaceTracker() if self.track_faces else None
         self._pose_smoother = TemporalPoseSmoother() if self.estimate_pose else None
+        if self.detect_gestures:
+            from detekface.gestures import GestureDetector
+
+            self._gesture_detector = GestureDetector(
+                config=gesture_config,  # type: ignore[arg-type]
+                on_gesture=on_gesture,
+                enabled_gestures=gestures,
+            )
+        else:
+            self._gesture_detector = None
 
         if resolution is not None:
             if (
@@ -225,6 +241,9 @@ class AsyncCameraEngine:
         if self._pose_smoother is not None:
             self._pose_smoother.reset()
 
+        if self._gesture_detector is not None:
+            self._gesture_detector.reset()
+
         # Drain frame queue
         while not self._frame_queue.empty():
             try:
@@ -310,6 +329,26 @@ class AsyncCameraEngine:
 
                 if self.track_faces and self._tracker is not None:
                     faces = self._tracker.update(faces)
+
+                if self.detect_gestures and self._gesture_detector is not None:
+                    from dataclasses import replace
+
+                    active_events = self._gesture_detector.process(faces, ts_frame.frame.shape[:2])
+                    if active_events:
+                        events_by_key = {}
+                        for ev in active_events:
+                            k = ev.track_id if ev.track_id is not None else ev.face_index
+                            events_by_key.setdefault(k, []).append(ev.name)
+
+                        faces_with_g = []
+                        for idx, face in enumerate(faces):
+                            k = face.track_id if face.track_id is not None else idx
+                            g_list = events_by_key.get(k)
+                            if g_list:
+                                faces_with_g.append(replace(face, gestures=g_list))
+                            else:
+                                faces_with_g.append(face)
+                        faces = faces_with_g
 
                 res = DetectionResult(faces=faces, image=ts_frame.frame)
             except Exception:
