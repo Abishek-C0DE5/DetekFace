@@ -83,6 +83,7 @@ class CameraSession:
         y_offset: float = 0.0,
         accessory_scale: Optional[float] = None,
         accessory_y_offset: Optional[float] = None,
+        show_quality: bool = False,
     ) -> None:
         self.camera_index = camera_index
         self.mirror = mirror
@@ -94,6 +95,7 @@ class CameraSession:
         self.detect_gestures = bool(detect_gestures or on_gesture is not None)
         self.on_gesture = on_gesture
         self.show_gestures = bool(show_gestures)
+        self.show_quality = bool(show_quality)
 
         eff = effect if effect is not None else accessory
         self.effect: Optional[str] = eff
@@ -613,6 +615,7 @@ class CameraSession:
         accessory_opacity: Optional[float] = None,
         accessory_scale: Optional[float] = None,
         accessory_y_offset: Optional[float] = None,
+        show_quality: bool = False,
     ) -> np.ndarray:
         """Render overlays on a copy of the latest frame.
 
@@ -730,6 +733,18 @@ class CameraSession:
                     y_offset=yo,
                     copy=False,
                 )
+
+        # Layer 7: Face Quality feedback
+        if show_quality or self.show_quality:
+            from detekface.quality import assess_face_quality
+
+            for idx, face in enumerate(self._latest_result.faces):
+                qm = assess_face_quality(display_frame, face, face_index=idx)
+                bx1, by2 = int(face.bbox.x1), int(face.bbox.y2)
+                badge_text = f"Q:{int(qm.quality_score * 100)}% | Sharp:{int(qm.sharpness)} | {qm.brightness_status.upper()}"
+                b_col = (0, 0, 255) if qm.is_blurry else ((0, 165, 255) if qm.brightness_status != "optimal" else (0, 255, 128))
+                cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 3, cv2.LINE_AA)
+                cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, b_col, 1, cv2.LINE_AA)
 
         return display_frame
 
@@ -905,6 +920,7 @@ def camera(
     accessory_opacity: float = 1.0,
     accessory_scale: float = 1.0,
     accessory_y_offset: float = 0.0,
+    show_quality: bool = False,
 ) -> None:
     """Open a live webcam feed, detect faces in real time, and display customizable overlays.
 
@@ -1051,6 +1067,11 @@ def camera(
             message=f"show_gestures must be a boolean, got {type(show_gestures).__name__}.",
             hint="Set show_gestures=True or show_gestures=False.",
         )
+    if not isinstance(show_quality, bool):
+        raise ConfigurationError(
+            message=f"show_quality must be a boolean, got {type(show_quality).__name__}.",
+            hint="Set show_quality=True or show_quality=False.",
+        )
 
     if on_gesture is not None or show_gestures:
         detect_gestures = True
@@ -1114,6 +1135,8 @@ def camera(
         session_kwargs["accessory_opacity"] = accessory_opacity
         session_kwargs["accessory_scale"] = accessory_scale
         session_kwargs["accessory_y_offset"] = accessory_y_offset
+    if show_quality:
+        session_kwargs["show_quality"] = True
 
     session = CameraSession(
         camera_index=camera_index,
@@ -1223,6 +1246,18 @@ def camera(
                     result.faces,
                     copy=False,
                 )
+
+            # Layer 7: Face Quality feedback
+            if show_quality:
+                from detekface.quality import assess_face_quality
+
+                for idx, face in enumerate(result.faces):
+                    qm = assess_face_quality(display_frame, face, face_index=idx)
+                    bx1, by2 = int(face.bbox.x1), int(face.bbox.y2)
+                    badge_text = f"Q:{int(qm.quality_score * 100)}% | Sharp:{int(qm.sharpness)} | {qm.brightness_status.upper()}"
+                    b_col = (0, 0, 255) if qm.is_blurry else ((0, 165, 255) if qm.brightness_status != "optimal" else (0, 255, 128))
+                    cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 0, 0), 3, cv2.LINE_AA)
+                    cv2.putText(display_frame, badge_text, (bx1, by2 + 18), cv2.FONT_HERSHEY_SIMPLEX, 0.42, b_col, 1, cv2.LINE_AA)
 
             # Render capture feedback banner if active
             if feedback_frames > 0:

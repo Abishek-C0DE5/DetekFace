@@ -142,6 +142,20 @@ from detekface.accessories import (
     overlay_rgba,
     render_accessory,
 )
+from detekface.alignment import (
+    AlignedFace,
+    FaceAligner,
+    align_face,
+    align_faces,
+    estimate_face_rotation,
+)
+from detekface.quality import (
+    FaceQualityMetrics,
+    ImageQualityResult,
+    QUALITY_DISCLAIMER,
+    assess_face_quality,
+    check_face_quality,
+)
 
 __version__: str = "0.3.0"
 
@@ -438,4 +452,14 @@ __all__: List[str] = [
     "compute_accessory_transform",
     "overlay_rgba",
     "render_accessory",
+    "AlignedFace",
+    "FaceAligner",
+    "align_face",
+    "align_faces",
+    "estimate_face_rotation",
+    "FaceQualityMetrics",
+    "ImageQualityResult",
+    "QUALITY_DISCLAIMER",
+    "assess_face_quality",
+    "check_face_quality",
 ]

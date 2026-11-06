@@ -873,6 +873,110 @@ class DetectionResult:
             save=save,
         )
 
+    def align(
+        self,
+        face_index: Optional[int] = None,
+        output_size: Optional[Tuple[int, int]] = (112, 112),
+        padding: float = 0.25,
+        center_on: str = "eyes",
+        border_mode: int = cv2.BORDER_REFLECT_101,
+        border_value: Tuple[int, int, int] = (0, 0, 0),
+    ):
+        """Straighten and crop a detected face using landmark alignment.
+
+        Args:
+            face_index: Index of the face to align (default None selects largest face).
+            output_size: Output (width, height) in pixels, or None to keep natural face dimensions.
+            padding: Additional fractional margin around face bounding box (default 0.25).
+            center_on: 'eyes' for portrait eye centering or 'face' for bbox centering.
+            border_mode: OpenCV border interpolation mode.
+            border_value: Border fill color if constant border mode.
+
+        Returns:
+            AlignedFace: Straightened, cropped face with full transformation metadata.
+        """
+        if not self.has_faces:
+            from detekface.exceptions import NoFaceDetectedError
+
+            raise NoFaceDetectedError(
+                message="Cannot align face: no faces were detected in this image.",
+                hint="Verify that the image contains a clear face.",
+            )
+
+        if face_index is None:
+            # Largest face by bounding box area
+            target_face = max(self.faces, key=lambda f: f.bbox.area)
+        else:
+            if not 0 <= face_index < len(self.faces):
+                raise IndexError(
+                    f"Face index {face_index} is out of range for {len(self.faces)} detected face(s)."
+                )
+            target_face = self.faces[face_index]
+
+        from detekface.alignment import align_face
+
+        return align_face(
+            image=self.image,
+            face=target_face,
+            output_size=output_size,
+            padding=padding,
+            center_on=center_on,
+            border_mode=border_mode,
+            border_value=border_value,
+        )
+
+    def aligned_faces(
+        self,
+        output_size: Optional[Tuple[int, int]] = (112, 112),
+        padding: float = 0.25,
+        center_on: str = "eyes",
+        border_mode: int = cv2.BORDER_REFLECT_101,
+        border_value: Tuple[int, int, int] = (0, 0, 0),
+    ):
+        """Align and crop all detected faces in this result.
+
+        Returns:
+            List[AlignedFace]: Ordered list of aligned face crops.
+        """
+        from detekface.alignment import align_faces
+
+        return align_faces(
+            image=self.image,
+            faces=self.faces,
+            output_size=output_size,
+            padding=padding,
+            center_on=center_on,
+            border_mode=border_mode,
+            border_value=border_value,
+        )
+
+    def check_quality(
+        self,
+        blur_threshold: float = 80.0,
+        min_face_size: int = 48,
+        min_area_ratio: float = 0.005,
+        min_brightness: float = 50.0,
+        max_brightness: float = 200.0,
+        border_margin: int = 4,
+    ):
+        """Evaluate technical capture quality for detected faces in this result.
+
+        Returns:
+            ImageQualityResult: Structured report with sharpness, lighting, framing,
+                                pose suitability, and actionable warnings.
+        """
+        from detekface.quality import check_face_quality
+
+        return check_face_quality(
+            image=self,
+            blur_threshold=blur_threshold,
+            min_face_size=min_face_size,
+            min_area_ratio=min_area_ratio,
+            min_brightness=min_brightness,
+            max_brightness=max_brightness,
+            border_margin=border_margin,
+        )
+
     def __repr__(self) -> str:
         img_h, img_w = self.image.shape[:2] if isinstance(self.image, np.ndarray) and self.image.ndim >= 2 else (0, 0)
         return f"<DetectionResult: {len(self.faces)} face(s) found in {img_w}x{img_h} image>"
