@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-11-06
+
+### Added
+- **Asynchronous 60 FPS Decoupled Webcam Engine (`AsyncCameraEngine`)**:
+  - Multi-threaded architecture decoupling hardware frame capture, background model inference, temporal tracking, and preview rendering.
+  - Preview rendering operates at monitor refresh rate (up to 60 FPS) without freezing during inference.
+  - Bounded single-slot communication queue with automatic stale frame dropping; eliminates queue lag buildup and unbounded memory growth.
+  - Accurate, independent telemetry reporting: capture FPS, rendering FPS, inference FPS, and end-to-end latency in milliseconds.
+  - Configurable stale detection timeout suppression (`stale_timeout_sec`): hides detections if inference stalls or disconnects rather than freezing outdated boxes on live video.
+  - High-resolution wall-clock timestamping via `TimestampedFrame` for frame-rate independent animations.
+- **Multi-Face Tracking (`FaceTracker`)**:
+  - Spatial IoU-based tracking assigning persistent integer IDs across consecutive video and webcam frames.
+  - Continuity maintenance across brief occlusions and rapid head motion.
+  - Display tracking IDs via `show_tracking_ids=True` in `detekface.camera()` and `detekface.video()`.
+- **3D Head-Pose Estimation (`estimate_head_pose`, `project_pose_axes`)**:
+  - 3D head orientation estimation from facial landmarks returning Euler angles: Yaw, Pitch, and Roll in degrees.
+  - 3D Cartesian orientation axis projection (Red=X, Green=Y, Blue=Z) anchored to the nose bridge.
+  - Temporal pose smoother (`TemporalPoseSmoother`) eliminating angular jitter across webcam frames.
+  - Integrated into still images (`detekface.detect(..., estimate_pose=True)`), webcam (`detekface.camera(estimate_pose=True, show_pose=True)`), and video (`detekface.video()`).
+- **Real-Time Facial Gesture Detection (`GestureDetector`)**:
+  - Event-driven detection supporting left eye blink, right eye blink, both eyes closed, mouth opening, head turns, and head tilts.
+  - Configurable temporal debounce, minimum duration, and threshold parameters (`GestureConfig`).
+  - Asynchronous event callbacks (`on_gesture=callback`) and visual gesture tags in HUD overlays (`show_gestures=True`).
+- **Augmented Reality Face Accessories (`FaceAccessoryRenderer`)**:
+  - Transparent AR accessories: `"sunglasses"`, `"crown"`, `"face_mask"`, `"futuristic_visor"`, and `"halo"`.
+  - Dynamic positioning, scaling, and 2D/3D angular rotation following facial landmark motion with temporal smoothing.
+  - Configurable opacity, scale adjust, and vertical offset; seamless multi-face accessory rendering.
+- **Face Alignment Normalization (`align_face`, `FaceAligner`)**:
+  - Straightens tilted faces using eye landmark affine similarity transforms.
+  - Generates standardized facial crops (e.g. 112×112, 224×224) with configurable padding while strictly preserving natural aspect ratios.
+  - Accessible directly via `result.align()` and `result.aligned_faces()`.
+- **Technical Face Quality Assessment (`check_face_quality`)**:
+  - Objective technical capture assessment: Laplacian variance sharpness, luminance lighting exposure, framing boundaries, face-to-image area ratio, and head-pose suitability.
+  - Documented metrics, actionable warning lists, and explicit disclaimer emphasizing technical capture quality rather than subjective attractiveness or biometric identity.
+  - Integrated live webcam feedback HUD with `show_quality=True`.
+- **Face Privacy Anonymization Mode (`anonymize`, `anonymize_frame`)**:
+  - Privacy filters supporting Gaussian blur, mosaic pixelation, and solid rectangular or elliptical masking.
+  - Optional fail-closed mode (`fail_closed=True`) masking the entire frame when zero faces are detected in privacy-critical contexts.
+  - Strict destination overwrite protection preventing inadvertent source destruction.
+  - Accessible via `detekface.anonymize()`, `result.anonymize()`, and live in webcam/video with `anonymize="blur"|"pixelate"|"solid"`.
+- **Unified Single-Pass API Integration**:
+  - Single shared detection pass across all modules; zero redundant model inference runs.
+  - Zero-argument beginner experience preserved: `import detekface; detekface.camera()`.
+  - Comprehensive argument validation and custom exceptions across all public entry points.
+
+### Changed
+- **Optimized Privacy Blur Performance**:
+  - Capped maximum blur kernel size at 45 to achieve ~2.6ms blur execution time, enabling real-time 60 FPS privacy filtering in webcam and video workflows.
+- **Enhanced CameraSession Lifecycle**:
+  - `CameraSession.open(cap=...)` now accepts custom video capture instances for automated testing and hardware injection.
+- **Upfront Codec Validation**:
+  - Video FourCC codec parameters are validated upfront with `ConfigurationError` diagnostics regardless of whether output destinations are set.
+
+---
+
 ## [0.2.0] - 2026-11-04
 
 ### Added

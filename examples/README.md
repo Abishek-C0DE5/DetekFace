@@ -19,6 +19,13 @@ This directory contains complete, runnable example scripts demonstrating key cap
 | **`live_scan_webcam.py`** | `python examples/live_scan_webcam.py` | Live webcam feed with computer-vision laser scanning beam, reticle lock, and telemetry. |
 | **`still_image_mesh.py`** | `python examples/still_image_mesh.py` | Still photo face detection with dense landmark extraction and mesh image export. |
 | **`multi_face_mesh.py`** | `python examples/multi_face_mesh.py` | Multi-face photo with independent wireframe mesh rendering. |
+| **`ar_accessories_webcam.py`** | `python examples/ar_accessories_webcam.py` | Real-time augmented reality accessories: sunglasses, crown, face mask, futuristic visor, and halo. |
+| **`head_pose_webcam.py`** | `python examples/head_pose_webcam.py` | Real-time 3D head pose estimation with projected Cartesian orientation axes and yaw/pitch/roll telemetry. |
+| **`gesture_webcam.py`** | `python examples/gesture_webcam.py` | Event-driven gesture detection tracking blinks, open mouth, head turns, and tilts with callbacks. |
+| **`multi_face_tracking.py`** | `python examples/multi_face_tracking.py` | Decoupled 60 FPS multi-face tracking assigning persistent IDs across occlusions and motion. |
+| **`face_alignment.py`** | `python examples/face_alignment.py` | Straightens tilted faces using eye similarity transforms and extracts aspect-ratio preserving crops. |
+| **`face_quality.py`** | `python examples/face_quality.py` | Evaluates technical sharpness, brightness, framing, and head pose suitability with actionable warnings. |
+| **`privacy_anonymize.py`** | `python examples/privacy_anonymize.py` | Local privacy filtering across images using Gaussian blur, pixelation mosaic, and solid masking. |
 
 ---
 

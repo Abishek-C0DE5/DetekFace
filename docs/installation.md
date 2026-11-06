@@ -54,11 +54,23 @@ Install the package directly into your active virtual environment:
 pip install detekface
 ```
 
-Or install from a local checkout:
+To install with optional dense facial mesh and MediaPipe BlazeFace support:
+
+```powershell
+pip install "detekface[mediapipe]"
+```
+
+For developer and testing tools:
+
+```powershell
+pip install "detekface[dev]"
+```
+
+Or install from a local checkout in editable mode:
 
 ```powershell
 cd DetekFace
-pip install .
+pip install -e ".[dev,mediapipe]"
 ```
 
 ---
@@ -92,7 +104,7 @@ python -c "import detekface; print('DetekFace version:', detekface.__version__)"
 
 Expected output:
 ```text
-DetekFace version: 0.1.0
+DetekFace version: 0.3.0
 ```
 
 ---

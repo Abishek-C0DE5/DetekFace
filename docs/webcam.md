@@ -411,4 +411,61 @@ def camera(
 | `window_title` | `str` | `"..."` | Custom text shown on the desktop window title bar. |
 | `max_frames` | `Optional[int]` | `None` | Max frames to process before closing (useful for automated testing). |
 | `detector` | `Optional[FaceDetector]` | `None` | Pre-initialized detector instance to reuse. |
+| `async_mode` | `bool` | `False` | Decoupled multi-threaded engine targeting 60 FPS preview. |
+| `target_fps` | `float` | `60.0` | Target display framerate for preview rendering loop. |
+| `resolution` | `Optional[Tuple[int, int]]` | `None` | Explicit hardware capture resolution negotiated with camera driver. |
+| `input_size` | `Optional[Tuple[int, int]]` | `None` | Inference resolution downscaling for high-speed detection. |
+| `track_faces` | `bool` | `False` | Enables persistent multi-face tracking engine. |
+| `show_tracking_ids` | `bool` | `False` | Renders `[ID #X]` badge over bounding boxes. |
+| `estimate_pose` | `bool` | `False` | Computes 3D head-pose Euler angles (Yaw, Pitch, Roll). |
+| `show_pose` | `bool` | `False` | Projects 3D Cartesian orientation axes from nose bridge. |
+| `detect_gestures` | `bool` | `False` | Evaluates facial gestures (blinks, mouth opening, head turns). |
+| `on_gesture` | `Optional[Callable]` | `None` | Event callback invoked when a gesture is triggered. |
+| `show_gestures` | `bool` | `False` | Renders active gesture tags in the HUD overlay. |
+| `effect` | `Optional[str]` | `None` | AR face accessory: `"sunglasses"`, `"crown"`, `"face_mask"`, `"futuristic_visor"`, `"halo"`. |
+| `anonymize` | `Optional[str]` | `None` | Real-time face privacy mode: `"blur"`, `"pixelate"`, or `"solid"`. |
+| `show_quality` | `bool` | `False` | Displays technical capture quality feedback HUD tags. |
+
+---
+
+## 10. Advanced 0.3.0 Features (60 FPS, Gestures, Tracking & AR)
+
+### Silky-Smooth 60 FPS Asynchronous Preview
+```python
+import detekface
+
+# Run camera with decoupled background inference:
+detekface.camera(
+    async_mode=True,
+    target_fps=60.0,
+    track_faces=True,
+    show_tracking_ids=True,
+    show_fps=True,
+)
+```
+
+### Combined AR Accessories & Gestures
+```python
+import detekface
+
+detekface.camera(
+    effect="sunglasses",
+    detect_gestures=True,
+    on_gesture=lambda ev: print(f"Gesture: {ev.name}"),
+    show_gestures=True,
+    show_pose=True,
+)
+```
+
+### Live Privacy Mode
+```python
+import detekface
+
+# Live blur privacy filter without bounding box clutter
+detekface.camera(
+    anonymize="blur",
+    anonymize_strength=0.6,
+    shape="none",
+)
+```
 

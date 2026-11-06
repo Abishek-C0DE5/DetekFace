@@ -23,6 +23,14 @@ Welcome to the official documentation for **DetekFace**, a high-performance, beg
 | **[Configuration & Styling](configuration.md)** | 5 overlay shapes (`rectangle`, `corners`, `circle`, `rounded`, `hud`), color parsing, status banners, and thresholds. | Visual customization, aesthetic tailoring |
 | **[Facial Mesh & Live FX](facial-mesh.md)** | 478 dense landmark wireframes, 5 mesh styles (`wireframe`, `neon`, etc.), and animated Live FX scanner. | Face topology, AR wireframes, futuristic HUD |
 | **[Face Shape Analysis](face-shape.md)** | Geometric proportion analysis, 6 canonical face shapes, and temporal smoothing. | Biometric classification, beauty tech |
+| **[Multi-Face Tracking](tracking.md)** | Multi-face tracking engine, persistent ID assignment, and occlusion continuity. | Video tracking, multi-person surveillance |
+| **[3D Head-Pose](pose.md)** | Euler angle estimation (Yaw, Pitch, Roll in degrees) and 3D orientation axis projection. | Driver attentiveness, user interface controls |
+| **[Gesture Detection](gestures.md)** | Real-time blink, mouth, and head gesture detection with asynchronous callbacks. | Accessibility, touchless kiosk interactions |
+| **[AR Accessories](accessories.md)** | Virtual sunglasses, crown, visor, face mask, and halo with alpha blending. | Augmented reality, social avatar filters |
+| **[Face Alignment](alignment.md)** | Eye-level straightening and aspect-preserving standardized crops (112x112, 224x224). | Biometric normalization, training pipelines |
+| **[Quality Assessment](quality.md)** | Objective capture quality assessment: sharpness, lighting, framing, and pose warnings. | Quality gates, capture compliance |
+| **[Privacy Anonymization](privacy.md)** | Local privacy filters (blur, pixelate, solid mask) with fail-closed protection. | GDPR/HIPAA compliance, media privacy |
+| **[Performance & 60 FPS](performance.md)** | Decoupled 4-stage async camera engine, capture/render/inference FPS, and benchmarks. | High-performance tuning, low-latency apps |
 | **[API Reference](api-reference.md)** | Exhaustive reference of every public function, class, dataclass, method, property, and exception. | Complete API lookups, typing specifications |
 | **[Troubleshooting & FAQ](troubleshooting.md)** | Solutions for camera permissions, missing GUI in headless environments, proxy/model download fixes. | Debugging errors, production deployment |
 | **[Validation Methodology](validation.md)** | Legally compliant validation dataset, precision/recall/F1 metrics, IoU matching, and scenario challenges. | Model evaluation, reproducible benchmarks |

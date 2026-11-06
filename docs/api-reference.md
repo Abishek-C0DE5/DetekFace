@@ -667,6 +667,99 @@ class FPSCounter:
 
 ---
 
+## Advanced 0.3.0 Modules & Functions
+
+### `detekface.anonymize`
+
+```python
+def anonymize(
+    image: Union[str, Path, np.ndarray, DetectionResult],
+    method: str = "blur",
+    strength: float = 0.5,
+    kernel_size: Optional[int] = None,
+    pixel_size: Optional[int] = None,
+    color: Union[str, Tuple[int, int, int]] = (0, 0, 0),
+    mask_shape: str = "box",
+    padding: float = 0.0,
+    fail_closed: bool = False,
+    output_path: Optional[Union[str, Path]] = None,
+    overwrite: bool = False,
+    detector: Optional[FaceDetector] = None,
+) -> AnonymizationResult: ...
+```
+Anonymizes detected faces using Gaussian blur, pixelation mosaic, or solid masking. When `fail_closed=True`, anonymizes the entire frame if zero faces are found. Never overwrites source files by default unless `overwrite=True`.
+
+### `detekface.align_face` & `align_faces`
+
+```python
+def align_face(
+    image: Union[str, Path, np.ndarray, DetectionResult],
+    face: Optional[FaceDetection] = None,
+    output_size: Optional[Tuple[int, int]] = (112, 112),
+    padding: float = 0.25,
+    center_on: str = "eyes",
+    border_mode: int = cv2.BORDER_REFLECT_101,
+    border_value: Tuple[int, int, int] = (0, 0, 0),
+) -> AlignedFace: ...
+
+def align_faces(
+    image: Union[str, Path, np.ndarray, DetectionResult],
+    faces: Optional[Sequence[FaceDetection]] = None,
+    output_size: Optional[Tuple[int, int]] = (112, 112),
+    padding: float = 0.25,
+    center_on: str = "eyes",
+    border_mode: int = cv2.BORDER_REFLECT_101,
+    border_value: Tuple[int, int, int] = (0, 0, 0),
+) -> List[AlignedFace]: ...
+```
+Aligns and levels faces by calculating the inter-pupillary tilt angle and applying an affine similarity transformation. Standardizes output dimensions while preserving natural facial proportions without stretching.
+
+### `detekface.check_face_quality`
+
+```python
+def check_face_quality(
+    image: Union[str, Path, np.ndarray, DetectionResult],
+    blur_threshold: float = 80.0,
+    min_face_size: int = 48,
+    min_area_ratio: float = 0.005,
+    min_brightness: float = 50.0,
+    max_brightness: float = 200.0,
+    border_margin: int = 4,
+    detector: Optional[FaceDetector] = None,
+) -> ImageQualityResult: ...
+```
+Evaluates technical capture quality (sharpness, lighting exposure, framing boundaries, size ratio, and head-pose suitability) and returns structured metrics with actionable technical warnings.
+
+### `detekface.estimate_head_pose`
+
+```python
+def estimate_head_pose(
+    landmarks: FaceLandmarks,
+    image_shape: Tuple[int, int],
+    camera_matrix: Optional[np.ndarray] = None,
+    dist_coeffs: Optional[np.ndarray] = None,
+) -> Optional[HeadPose]: ...
+```
+Computes 3D head pose Euler angles (Yaw, Pitch, Roll in degrees) from facial landmarks using Perspective-n-Point solving.
+
+### `detekface.FaceTracker`
+
+Spatial IoU-based multi-face tracking engine assigning persistent tracking IDs across consecutive video/webcam frames.
+
+### `detekface.GestureDetector`
+
+Event-driven facial gesture detector evaluating Eye Aspect Ratios (EAR) and Mouth Aspect Ratios (MAR) to trigger callbacks on blinks, mouth openings, head turns, and tilts.
+
+### `detekface.FaceAccessoryRenderer`
+
+Augmented reality accessory renderer for `"sunglasses"`, `"crown"`, `"face_mask"`, `"futuristic_visor"`, and `"halo"`. Dynamically scales and rotates accessories to match 3D head movement.
+
+### `detekface.AsyncCameraEngine`
+
+Multi-threaded decoupled webcam engine running hardware frame capture, background model inference, temporal tracking, and 60 FPS preview rendering independently.
+
+---
+
 ## Constants
 
 - **`SUPPORTED_BACKENDS`**: `("yunet", "mediapipe")`
@@ -675,6 +768,10 @@ class FPSCounter:
 - **`NAMED_COLORS`**: Dict mapping color names (`"green"`, `"neon_green"`, `"red"`, `"blue"`, `"cyan"`, etc.) to RGB tuples.
 - **`SUPPORTED_IMAGE_EXTENSIONS`**: `{".jpg", ".jpeg", ".png", ".webp", ".bmp"}`
 - **`SUPPORTED_VIDEO_EXTENSIONS`**: `{".mp4", ".avi", ".mov", ".mkv", ".webm"}`
+- **`SUPPORTED_ACCESSORIES`**: `{"sunglasses", "crown", "face_mask", "futuristic_visor", "halo"}`
+- **`ALL_GESTURES`**: `("left_eye_blink", "right_eye_blink", "both_eyes_closed", "mouth_opening", "head_turn_left", "head_turn_right", "head_tilt")`
+- **`SUPPORTED_ANONYMIZE_METHODS`**: `{"blur", "pixelate", "solid"}`
+
 
 ---
 

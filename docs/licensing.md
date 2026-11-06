@@ -13,6 +13,7 @@ DetekFace is built on permissive, open-source software and open-access deep lear
 | **MediaPipe Model** | Google MediaPipe Team | [Apache 2.0](#4-mediapipe-blazeface-model-license) | Yes |
 | **OpenCV (`opencv-python`)** | OpenCV Foundation | Apache 2.0 | Yes |
 | **NumPy** | NumPy Developers | BSD 3-Clause | Yes |
+| **AR Accessories Assets** | DetekFace Authors | [MIT License](#2-detekface-package-license) | Yes |
 | **Validation Dataset** | OpenCV / Wikimedia Commons | CC BY 4.0 & Public Domain | Yes |
 
 ---
